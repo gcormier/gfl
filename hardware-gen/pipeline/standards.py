@@ -59,31 +59,6 @@ DIN_TO_ISO: dict[str, str] = {
     "DIN938":  "ISO4031",
 }
 
-# ── Known valid ISO standards (subset — extend as workbench support grows) ────
-
-KNOWN_ISO_STANDARDS: frozenset[str] = frozenset(DIN_TO_ISO.values()) | frozenset(
-    {
-        "ISO4762",  # Socket cap
-        "ISO4017",  # Hex full
-        "ISO4014",  # Hex partial
-        "ISO4032",  # Hex nut
-        "ISO4035",  # Thin hex nut
-        "ISO10511", # Nyloc thin
-        "ISO7042",  # Nyloc full
-        "ISO7089",  # Plain washer
-        "ISO7090",  # Plain washer (chamfered)
-        "ISO7980",  # Spring washer
-        "ISO10642", # Countersunk socket
-        "ISO1207",  # Slotted cheese head
-        "ISO2009",  # Slotted countersunk
-        "ISO1580",  # Slotted pan
-        "ISO7045",  # Cross pan
-        "ISO4029",  # Set screw cup
-        "ISO4026",  # Set screw flat
-        "ISO4028",  # Set screw dog
-    }
-)
-
 
 def resolve_standard(raw: str) -> str:
     """
@@ -91,7 +66,6 @@ def resolve_standard(raw: str) -> str:
 
     Returns the canonical standard identifier to pass to the CAD engine.
     Logs a warning if the input was a DIN standard that was remapped.
-    Raises ``ValueError`` if the standard is unrecognised.
     """
     # Normalise: strip whitespace, uppercase, remove internal spaces
     normalised = raw.strip().upper().replace(" ", "").replace("-", "")
@@ -106,14 +80,4 @@ def resolve_standard(raw: str) -> str:
         )
         return iso_equiv
 
-    if normalised in KNOWN_ISO_STANDARDS:
-        return normalised
-
-    # Unknown standard — warn but pass through so the engine can try it.
-    # This allows workbench-specific or future standards without code changes.
-    log.warning(
-        "Standard '%s' is not in the known-standards registry. "
-        "Passing through to the CAD engine unchanged — it may fail.",
-        raw,
-    )
     return normalised

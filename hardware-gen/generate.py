@@ -223,6 +223,7 @@ def main() -> int:
             config = _load_config(config_path)
         except Exception as exc:  # noqa: BLE001
             log.error("Failed to load config '%s': %s", config_path, exc)
+            failed += 1
             continue
 
         if not config.fasteners:
