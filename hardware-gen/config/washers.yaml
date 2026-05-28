@@ -1,0 +1,10 @@
+fasteners:
+
+  # M5 plain washer — used under Gridfinity magnets
+  - name: "M5_PlainWasher"
+    standard: "ISO7089"   # DIN125A equivalent
+    size: "M5"
+    # No length for washers; the workbench derives thickness from the standard.
+    pipeline:
+      export_3d: "step"
+      export_2d_views: ["top"]

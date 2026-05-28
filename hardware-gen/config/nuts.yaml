@@ -1,0 +1,9 @@
+fasteners:
+
+  # M4 hex nut — DIN934 used here intentionally to test the ISO-remap warning
+  - name: "M4_HexNut"
+    standard: "DIN934"    # will be auto-remapped to ISO4032 with a warning
+    size: "M4"
+    pipeline:
+      export_3d: "step"
+      export_2d_views: ["top"]

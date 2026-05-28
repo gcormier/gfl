@@ -1,0 +1,4 @@
+fasteners:
+  # Standoffs, inserts, pins, clips, and anything else that doesn't belong
+  # in bolts_screws, nuts, or washers goes here.
+  []

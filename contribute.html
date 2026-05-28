@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en" class="comfy contrib-page">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contribute a Standard — Gridfinity Label Generator</title>
+  <link rel="icon" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans:wght@400;700;900&family=Oswald:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Stubs required by jscad-editor.js before it loads -->
+  <script>
+    'use strict';
+    const BASE = location.pathname.endsWith('/')
+      ? location.pathname
+      : location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
+    const assetUrl = path => BASE + path.replace(/^\//, '');
+    function scheduleRender() {}  // no-op: no label canvas on this page
+    function setJscadResult() {}  // no-op: "Use as Icon" hidden on this page
+  </script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Top Bar ─────────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <svg class="logo" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+        <rect x="1" y="1" width="6" height="6"/><rect x="11" y="1" width="6" height="6"/>
+        <rect x="1" y="11" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/>
+      </svg>
+      <span class="site-title">Gridfinity Label Generator</span>
+      <code id="appVersion" class="version-pill"></code>
+      <span class="topbar-spacer"></span>
+      <a href="index.html" class="gh-link">← Back to app</a>
+      <a href="https://github.com/gcormier/gfl" class="gh-link" target="_blank" rel="noopener">github.com/gcormier/gfl ↗</a>
+    </div>
+  </header>
+
+  <!-- ── Page Intro ─────────────────────────────────────────────────────── -->
+  <div class="contrib-page-intro">
+    <h1 class="contrib-page-title">Contribute a Standard</h1>
+    <p class="contrib-page-subtitle">Design a parametric fastener icon using JSCad and submit it as a pull request — no local tooling required.</p>
+  </div>
+
+  <!-- ── Main Layout ────────────────────────────────────────────────────── -->
+  <div class="contrib-layout">
+
+    <!-- ── Standards Browser ──────────────────────────────────────────── -->
+    <div class="contrib-browse-col">
+      <div class="contrib-browse-hdr">
+        <input type="text" id="contribFilterInput" class="form-input" placeholder="Filter standards…" autocomplete="off" />
+        <div class="contrib-browse-controls">
+          <span class="mini-label">Previews</span>
+          <button id="contribPreviewToggle" class="seg-btn seg-sm" aria-pressed="false">Off</button>
+        </div>
+      </div>
+      <div id="contribStandardsList" class="contrib-standards-list">
+        <!-- "New standard" card (always first) -->
+        <div class="contrib-card contrib-card-new active" id="contribCardNew" role="button" tabindex="0">
+          <span class="contrib-card-new-icon">+</span>
+          <div class="contrib-card-info">
+            <span class="contrib-card-name">New standard</span>
+            <span class="contrib-card-desc">Start from scratch with the default template</span>
+          </div>
+        </div>
+        <!-- Standard cards injected by JS -->
+      </div>
+    </div>
+
+    <!-- ── Editor Column ──────────────────────────────────────────────── -->
+    <div class="contrib-edit-col">
+
+      <!-- 00 · Generate from Image -->
+      <section class="cfg-section" id="imageTraceSection">
+        <div class="section-hdr"><span class="section-num">00</span> Generate from Image <span class="it-optional">(optional)</span></div>
+        <p class="hint-text">Drop, browse, or paste an engineering drawing to trace a starting JSCAD polygon. Drag on the image to select the region to trace.</p>
+
+        <div id="itDropZone" class="it-drop-zone">
+          <svg class="it-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+          <span class="it-drop-text">Drop image here or <u>click to browse</u></span>
+          <span class="it-drop-hint">Ctrl+V / ⌘V to paste from clipboard</span>
+          <input type="file" id="itFileInput" accept="image/*" hidden />
+        </div>
+
+        <div id="itImageArea" hidden>
+          <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
+          <p class="hint-text it-sel-hint">Drag on the image above to select a region — or leave unselected to trace the whole image</p>
+
+          <div class="it-sliders">
+            <div class="it-slider-row">
+              <label class="it-slider-label" for="itThresholdSlider">Threshold</label>
+              <input type="range" id="itThresholdSlider" class="it-slider" min="10" max="245" value="128" />
+              <span class="it-slider-val" id="itThresholdVal">128</span>
+            </div>
+            <div class="it-slider-row">
+              <label class="it-slider-label" for="itEpsilonSlider">Simplify</label>
+              <input type="range" id="itEpsilonSlider" class="it-slider" min="0" max="30" value="0" step="0.5" />
+              <span class="it-slider-val" id="itEpsilonVal">0</span>
+            </div>
+          </div>
+
+          <div class="jscad-toolbar">
+            <button type="button" id="itInsertBtn" class="btn-primary jscad-btn" disabled>Insert into Editor ↓</button>
+            <button type="button" id="itClearBtn" class="btn-secondary jscad-btn">Clear image</button>
+          </div>
+          <div id="itTraceStatus" class="jscad-status"></div>
+        </div>
+      </section>
+
+      <!-- 01 · JSCAD Editor -->
+      <section class="cfg-section" id="jscadSection">
+        <div class="section-hdr"><span class="section-num">01</span> Design (JSCAD)</div>
+        <p class="hint-text jscad-hint">
+          Write parametric 2D geometry using <code>primitives</code>, <code>booleans</code>,
+          <code>transforms</code>. <code>main()</code> must return a 2D shape (geom2).
+          Select a standard on the left to load and modify an existing definition.
+        </p>
+        <div id="jscadEditorWrap" class="jscad-editor-wrap"></div>
+        <div class="jscad-toolbar">
+          <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
+          <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
+          <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Submit New Standard…</button>
+        </div>
+        <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
+        <div id="jscadStatus" class="jscad-status"></div>
+      </section>
+
+      <!-- 02 · How to contribute -->
+      <section class="cfg-section">
+        <div class="section-hdr"><span class="section-num">02</span> How to contribute</div>
+        <ol class="contrib-guide-steps">
+          <li>
+            <strong>Design your icon</strong> — edit the JSCad code above and click <strong>▶ Run</strong>
+            to preview it. Pick a standard from the left to load and modify an existing definition,
+            or choose <em>New standard</em> to start from the template.
+          </li>
+          <li>
+            <strong>Submit a PR</strong> — click <strong>Submit / Modify Standard…</strong>, enter a standard
+            ID (e.g. <code>din912</code>), then <strong>Open on GitHub →</strong>. GitHub pre-fills the file
+            and walks you through forking &amp; opening a pull request — no CLI or authentication needed.
+          </li>
+          <li>
+            <strong>Use it now</strong> — while your PR is in review, click <strong>Export SVG ↓</strong>
+            to download your icon as a vector file. Then on the main app go to
+            <strong>Icon → Custom → Upload SVG…</strong> to use it immediately in your current session.
+          </li>
+        </ol>
+        <p class="contrib-guide-note">
+          See <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> for file
+          format details and local development instructions.
+        </p>
+      </section>
+
+    </div><!-- /.contrib-edit-col -->
+  </div><!-- /.contrib-layout -->
+</div><!-- /#app -->
+
+<!-- Contribution Modal -->
+<div id="contribOverlay" class="shortcuts-overlay" hidden>
+  <div class="shortcuts-dialog contrib-dialog">
+    <div class="shortcuts-hdr">
+      <span class="shortcuts-title" id="contribModalTitle">Submit New Standard as PR</span>
+      <button type="button" onclick="closeContribModal()" class="shortcuts-close">×</button>
+    </div>
+
+    <div id="contribIdRow">
+      <p class="contrib-step-text">
+        Choose an ID for this standard (lowercase letters, digits, dashes).
+        It becomes the filename <code>standards-jscad/&lt;id&gt;.js</code>.
+      </p>
+      <input type="text" id="contribStdIdInput" class="contrib-id-input" placeholder="e.g. din-912" autocomplete="off" />
+    </div>
+
+    <p class="contrib-step-text hint-text" id="contribHintNew">
+      Clicking <b>Open on GitHub</b> opens a new tab on github.com with the file
+      pre-filled. GitHub will offer to fork the repo and open a pull request — no
+      authentication required here.
+    </p>
+    <p class="contrib-step-text hint-text" id="contribHintEdit" hidden>
+      The modified file will be <b>copied to your clipboard</b> and GitHub's editor
+      will open. Select all (<kbd>Ctrl+A</kbd>) and paste (<kbd>Ctrl+V</kbd>) to
+      replace the file, then submit a pull request.
+    </p>
+
+    <p class="contrib-step-text contrib-error" id="contribErrorMsg"></p>
+
+    <div class="contrib-actions">
+      <button type="button" onclick="closeContribModal()" class="btn-secondary">Cancel</button>
+      <button type="button" onclick="submitContribModal()" class="btn-primary">Open on GitHub →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@jscad/modeling@2.13.0/dist/jscad-modeling.min.js"></script>
+<script src="https://unpkg.com/imagetracerjs@1.2.6/imagetracer_v1.2.6.js"></script>
+<script src="jscad-editor.js"></script>
+<script src="image-trace.js"></script>
+<script src="github-contrib.js"></script>
+<script>
+'use strict';
+
+// ── Standards Browser State ────────────────────────────────────────────────────
+
+let _contribStandards = [];
+let _previewsEnabled  = false;
+let _previewObserver  = null;
+let _activeCardId     = null; // null = "New standard"
+
+// ── Page Init ─────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Populate version pill from VERSION file
+  fetch(assetUrl('VERSION')).then(r => r.text()).then(v => {
+    const el = document.getElementById('appVersion');
+    if (el) el.textContent = 'v' + v.trim();
+  }).catch(() => {});
+
+  // Init JSCAD editor (defined in jscad-editor.js)
+  await initJscadEditor();
+
+  // Init image tracer (defined in image-trace.js)
+  initImageTracer();
+
+  // Wire "New standard" card
+  const newCard = document.getElementById('contribCardNew');
+  newCard.addEventListener('click', () => selectContribCard(null));
+  newCard.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') selectContribCard(null); });
+
+  // Filter input
+  document.getElementById('contribFilterInput').addEventListener('input', _onFilter);
+
+  // Previews toggle
+  document.getElementById('contribPreviewToggle').addEventListener('click', _togglePreviews);
+
+  // Load standards list
+  await _loadStandards();
+
+  // Handle ?standard= URL param — auto-select the standard
+  const params = new URLSearchParams(location.search);
+  const stdId  = params.get('standard');
+  if (stdId) {
+    selectContribCard(stdId);
+    const card = document.querySelector(`.contrib-card[data-id="${CSS.escape(stdId)}"]`);
+    if (card) card.scrollIntoView({ block: 'nearest' });
+  }
+});
+
+// ── Standards Loading & Rendering ─────────────────────────────────────────────
+
+async function _loadStandards() {
+  try {
+    const res = await fetch(assetUrl('standards.json'));
+    _contribStandards = await res.json();
+  } catch {
+    _contribStandards = [];
+  }
+  _renderList(_contribStandards);
+}
+
+function _escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function _renderList(standards) {
+  const list = document.getElementById('contribStandardsList');
+
+  // Remove previously injected cards (keep #contribCardNew)
+  list.querySelectorAll('.contrib-card:not(#contribCardNew)').forEach(el => el.remove());
+
+  // Disconnect any live observer before rebuilding
+  if (_previewObserver) { _previewObserver.disconnect(); _previewObserver = null; }
+
+  for (const s of standards) {
+    const card = document.createElement('div');
+    card.className = 'contrib-card' + (s.id === _activeCardId ? ' active' : '');
+    card.dataset.id = s.id;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+
+    const label = s.designations.map(d => `${d.system} ${d.code}`).join(' / ');
+
+    // Preview wrap — only created for JSCAD standards, hidden until previews toggled on
+    const previewHtml = s.jscad
+      ? `<div class="contrib-card-preview-wrap" data-jscad="${_escHtml(s.jscad)}" hidden>
+           <canvas class="contrib-card-preview" width="40" height="40" data-jscad-id="${_escHtml(s.jscad)}"></canvas>
+         </div>`
+      : '';
+
+    const badgeHtml = s.jscad
+      ? `<span class="contrib-card-badge">JSCAD</span>`
+      : '';
+
+    card.innerHTML = `
+      ${previewHtml}
+      <div class="contrib-card-info">
+        <span class="contrib-card-name">${_escHtml(label)}</span>
+        <span class="contrib-card-desc">${_escHtml(s.description.slice(0, 80))}</span>
+      </div>
+      ${badgeHtml}
+    `;
+
+    card.addEventListener('click', () => selectContribCard(s.id));
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') selectContribCard(s.id);
+    });
+    list.appendChild(card);
+  }
+
+  // If previews are on, re-enable observation for newly rendered cards
+  if (_previewsEnabled) {
+    list.querySelectorAll('.contrib-card-preview-wrap[data-jscad]').forEach(w => { w.hidden = false; });
+    _setupObserver();
+  }
+}
+
+// ── Card Selection ─────────────────────────────────────────────────────────────
+
+function selectContribCard(id) {
+  _activeCardId = id;
+
+  // Update active state on all cards
+  document.getElementById('contribCardNew').classList.toggle('active', id === null);
+  document.querySelectorAll('.contrib-card[data-id]').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === id);
+  });
+
+  if (id) {
+    loadStandardIntoEditor(id); // defined in jscad-editor.js
+  } else {
+    resetEditorToTemplate();    // defined in jscad-editor.js
+  }
+}
+
+// ── Filter ────────────────────────────────────────────────────────────────────
+
+function _onFilter(e) {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) { _renderList(_contribStandards); return; }
+
+  const filtered = _contribStandards.filter(s => {
+    if (s.description.toLowerCase().includes(q)) return true;
+    if (s.id.toLowerCase().includes(q)) return true;
+    for (const d of s.designations) {
+      if (`${d.system} ${d.code}`.toLowerCase().includes(q)) return true;
+    }
+    return false;
+  });
+  _renderList(filtered);
+}
+
+// ── Preview Toggle ─────────────────────────────────────────────────────────────
+
+function _togglePreviews() {
+  _previewsEnabled = !_previewsEnabled;
+  const btn = document.getElementById('contribPreviewToggle');
+  btn.textContent = _previewsEnabled ? 'On' : 'Off';
+  btn.setAttribute('aria-pressed', String(_previewsEnabled));
+  btn.classList.toggle('seg-active', _previewsEnabled);
+
+  if (_previewsEnabled) {
+    document.querySelectorAll('.contrib-card-preview-wrap[data-jscad]').forEach(w => { w.hidden = false; });
+    _setupObserver();
+  } else {
+    if (_previewObserver) { _previewObserver.disconnect(); _previewObserver = null; }
+    document.querySelectorAll('.contrib-card-preview-wrap[data-jscad]').forEach(w => {
+      w.hidden = true;
+      const cv = w.querySelector('canvas');
+      if (cv) {
+        cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+        delete cv.dataset.rendered;
+      }
+    });
+  }
+}
+
+function _setupObserver() {
+  if (_previewObserver) _previewObserver.disconnect();
+  _previewObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      const canvas = entry.target;
+      if (canvas.dataset.rendered) continue;
+      canvas.dataset.rendered = '1';
+      _previewObserver.unobserve(canvas);
+      const id = canvas.dataset.jscadId;
+      if (id) renderStandardIntoCanvas(id, canvas); // defined in jscad-editor.js
+    }
+  }, { rootMargin: '80px' });
+
+  document.querySelectorAll('.contrib-card-preview[data-jscad-id]').forEach(cv => {
+    if (!cv.dataset.rendered) _previewObserver.observe(cv);
+  });
+}
+</script>
+</body>
+</html>

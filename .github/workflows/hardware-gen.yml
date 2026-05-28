@@ -1,0 +1,176 @@
+name: hardware-gen
+
+on:
+  push:
+    paths:
+      - "hardware-gen/config/**"
+      - ".github/workflows/hardware-gen.yml"
+  pull_request:
+    paths:
+      - "hardware-gen/config/**"
+      - ".github/workflows/hardware-gen.yml"
+  workflow_dispatch:
+    inputs:
+      config_file:
+        description: "YAML config to process (leave empty to run all)"
+        required: false
+        default: ""
+
+# Only run one pipeline at a time per branch to avoid clobbering the
+# artifact cache. Concurrent runs on other branches are still allowed.
+concurrency:
+  group: hardware-gen-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Lint & type-check (no FreeCAD needed) ──────────────────────────────────
+  lint:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hardware-gen
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install dev dependencies
+        run: uv sync --dev
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Mypy type check
+        run: uv run mypy generate.py pipeline/
+
+  # ── Dry-run (parses YAML, resolves standards — no FreeCAD needed) ──────────
+  dry-run:
+    name: Dry-run (YAML validation)
+    runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        working-directory: hardware-gen
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install runtime dependencies
+        run: uv sync
+
+      - name: Dry-run all configs
+        run: uv run generate.py --dry-run --verbose
+
+      - name: Check standards.json is up to date
+        run: uv run python generate_standards_json.py --check
+
+  # ── Full generation (requires FreeCAD) ────────────────────────────────────
+  generate:
+    name: Generate 3D + 2D artifacts
+    runs-on: ubuntu-latest
+    needs: dry-run
+    # Only run on push to main or manual dispatch to avoid burning CI minutes
+    # on every PR.  Remove this condition to run on every PR.
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    env:
+      FREECAD_APPIMAGE_URL: "https://github.com/FreeCAD/FreeCAD/releases/download/1.1.1/FreeCAD_1.1.1-Linux-x86_64-py311.AppImage"
+    defaults:
+      run:
+        working-directory: hardware-gen
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install runtime dependencies
+        run: uv sync
+
+      - name: Cache FreeCAD AppImage
+        id: cache-freecad
+        uses: actions/cache@v4
+        with:
+          path: /opt/freecad
+          key: freecad-appimage-${{ env.FREECAD_APPIMAGE_URL }}
+
+      - name: Download and extract FreeCAD AppImage
+        if: steps.cache-freecad.outputs.cache-hit != 'true'
+        working-directory: /tmp
+        run: |
+          wget -q -O freecad.appimage "$FREECAD_APPIMAGE_URL"
+          chmod +x freecad.appimage
+          ./freecad.appimage --appimage-extract
+          sudo mv squashfs-root /opt/freecad
+
+      - name: Set cache week key
+        id: week
+        run: echo "key=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Fasteners workbench
+        id: cache-fasteners
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/FreeCAD/Mod/Fasteners
+          key: fasteners-wb-${{ runner.os }}-${{ steps.week.outputs.key }}
+
+      - name: Install Fasteners workbench
+        if: steps.cache-fasteners.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/.local/share/FreeCAD/Mod"
+          git clone --depth=1 https://github.com/shaise/FreeCAD_FastenersWB.git \
+              "$HOME/.local/share/FreeCAD/Mod/Fasteners"
+
+      - name: Set FREECADCMD path
+        run: echo "FREECADCMD=/opt/freecad/usr/bin/freecadcmd" >> "$GITHUB_ENV"
+
+      - name: Generate hardware artifacts
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          CONFIG="${{ github.event.inputs.config_file }}"
+          if [ -n "$CONFIG" ]; then
+              uv run generate.py --verbose "$CONFIG"
+          else
+              uv run generate.py --verbose
+          fi
+
+      - name: Upload build artifacts (STEP files)
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardware-step-${{ github.sha }}
+          path: hardware-gen/build/*.step
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload output artifacts (SVG files)
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardware-svg-${{ github.sha }}
+          path: hardware-gen/output/*.svg
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit generated SVGs to repo for GitHub Pages
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hardware-gen/output/*.svg || true
+          if git diff --cached --quiet; then
+            echo "No SVG changes to commit."
+          else
+            git commit -m "chore: update generated SVGs [skip ci]"
+            git push
+          fi

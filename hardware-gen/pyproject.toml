@@ -1,0 +1,41 @@
+[project]
+name = "hardware-gen"
+version = "0.1.0"
+description = "Headless hardware 3D/2D generation pipeline (FreeCAD + Fasteners WB)"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+# Runtime dependencies — all installable in a standard venv via uv.
+# FreeCAD itself is NOT listed here; it must be installed separately on the
+# host (or in CI via apt/conda) because it ships its own bundled Python.
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+hardware-gen = "generate:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "types-PyYAML>=6.0",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]   # long lines acceptable in docstrings
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true   # FreeCAD has no stubs
