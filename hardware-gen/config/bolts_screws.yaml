@@ -1,7 +1,6 @@
 fasteners:
 
-  # M8 socket cap screw — used on Gridfinity bin attachment points
-  - name: "M8x20_SocketCap"
+  - name: "M8x10_SocketCap"
     standard: "ISO4762"   # DIN912 is the equivalent but ISO is preferred
     size: "M8"
     length: 20
@@ -9,11 +8,3 @@ fasteners:
       export_3d: "step"
       export_2d_views: ["iso", "top", "side"]
 
-  # M3 socket cap — common for PCB standoffs in Gridfinity electronics trays
-  - name: "M3x8_SocketCap"
-    standard: "ISO4762"
-    size: "M3"
-    length: 8
-    pipeline:
-      export_3d: "step"
-      export_2d_views: ["iso", "top"]
