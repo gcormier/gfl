@@ -68,10 +68,14 @@ def resolve_standard(raw: str) -> str:
     Logs a warning if the input was a DIN standard that was remapped.
     """
     # Normalise: strip whitespace, uppercase, remove internal spaces
-    normalised = raw.strip().upper().replace(" ", "").replace("-", "")
+    normalised = raw.strip().upper().replace(" ", "")
+    # Hyphens are stripped only for DIN lookup (DIN keys have no hyphens);
+    # the returned canonical name preserves hyphens because FreeCAD uses them
+    # in multi-part standards like ISO7380-1.
+    din_key = normalised.replace("-", "")
 
-    if normalised in DIN_TO_ISO:
-        iso_equiv = DIN_TO_ISO[normalised]
+    if din_key in DIN_TO_ISO:
+        iso_equiv = DIN_TO_ISO[din_key]
         log.warning(
             "Standard '%s' remapped to ISO equivalent '%s'. "
             "Prefer ISO standards in your YAML config.",
