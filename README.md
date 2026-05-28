@@ -2,12 +2,15 @@
 
 A browser-based label generator for [Gridfinity](https://www.youtube.com/watch?v=ra_9zU-mnl8) storage bins. Design and print labels with hardware standard drawings, [Material Design Icons](https://pictogrammers.com/library/mdi/), or your own custom SVG icons — directly to a **Brother PT-P710BT** label printer over USB.
 
+
+
 **Live app:** [gcormier.github.io/gfl](https://gcormier.github.io/gfl/)
 
 ## Features
 
 - Search a catalog of **DIN / ISO fastener standards** with automatic cross-references
 - Render technical drawings, MDI icons, or custom SVG icons on the label
+- Generate images as code using [FreeCAD Fasteners Workbench](https://wiki.freecad.org/Fasteners_Workbench)
 - Freeform text mode for general-purpose labels
 - Optional QR code with a link back to the standard
 - Supports 4 mm – 24 mm Brother TZe tape widths

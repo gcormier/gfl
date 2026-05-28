@@ -1,18 +1,25 @@
 fasteners:
 
-  - name: "M8x10_SocketCap"
+  - name: "SocketCap"
     standard: "ISO4762"   # DIN912 is the equivalent but ISO is preferred
-    size: "M8"
+    size: "M4"
     length: 20
     pipeline:
       export_3d: "step"
       export_2d_views: ["iso", "top", "side"]
 
-  - name: "M8x10_ButtonHead"
+  - name: "ButtonHead"
     standard: "ISO7380-1"
-    size: "M8"
+    size: "M4"
     length: 10
     pipeline:
       export_3d: "step"
       export_2d_views: ["iso", "top", "side"]
 
+  - name: "ButtonHeadFlange"
+    standard: "ISO7380-2"
+    size: "M4"
+    length: 10
+    pipeline:
+      export_3d: "step"
+      export_2d_views: ["iso", "top", "side"]
