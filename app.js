@@ -1,7 +1,7 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')
@@ -39,7 +39,6 @@ async function init() {
   renderFavoritesPanel();
   updateStarButtons();
   render();
-  if (typeof initJscadEditor === 'function') initJscadEditor();
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────

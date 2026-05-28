@@ -14,8 +14,7 @@
       }
     ],
     "hardwareType": "nut",
-    "image": "/images/standards/iso_10511.png",
-    "jscad": "iso10511"
+    "image": "/images/standards/iso_10511.png"
   },
   {
     "id": "iso10642",
@@ -32,8 +31,7 @@
       }
     ],
     "hardwareType": "screw",
-    "image": "/images/standards/iso_10642.png",
-    "jscad": "iso10642"
+    "image": "/images/standards/iso_10642.png"
   },
   {
     "id": "iso4032",
@@ -50,8 +48,7 @@
       }
     ],
     "hardwareType": "nut",
-    "image": "/images/standards/iso_4032.png",
-    "jscad": "iso4032"
+    "image": "/images/standards/iso_4032.png"
   },
   {
     "id": "iso4762",
@@ -68,8 +65,7 @@
       }
     ],
     "hardwareType": "screw",
-    "image": "/images/standards/iso_4762.png",
-    "jscad": "iso4762"
+    "image": "/images/standards/iso_4762.png"
   },
   {
     "id": "iso7089",
@@ -86,8 +82,7 @@
       }
     ],
     "hardwareType": "washer",
-    "image": "/images/standards/iso_7089.png",
-    "jscad": "iso7089"
+    "image": "/images/standards/iso_7089.png"
   },
   {
     "id": "iso7380",
@@ -104,7 +99,6 @@
       }
     ],
     "hardwareType": "screw",
-    "image": "/images/standards/iso_7380.png",
-    "jscad": "iso7380"
+    "image": "/images/standards/iso_7380.png"
   }
 ]

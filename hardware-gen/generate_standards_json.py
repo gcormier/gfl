@@ -42,7 +42,6 @@ def _load_standards() -> list[dict[str, Any]]:
                 "designations": designations,
                 "hardwareType": entry["hardware_type"],
                 "image": entry["image"],
-                "jscad": entry["jscad"],
             }
         )
     return output

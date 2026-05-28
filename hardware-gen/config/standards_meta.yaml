@@ -5,13 +5,12 @@
 # the root standards.json consumed by the frontend.
 #
 # Fields:
-#   id            - Lowercase ISO code (matches jscad ID and image filename stem)
+#   id            - Lowercase ISO code (matches image filename stem)
 #   primary_system - DIN or ISO (which system is the canonical name)
 #   description   - Human-readable description shown in the web catalog
 #   hardware_type - screw | nut | washer
 #   designations  - Cross-reference list (system + code pairs)
 #   image         - Absolute web path to the catalog image
-#   jscad         - ID passed to registerJscadStandard() in standards-jscad/
 
 standards:
   - id: iso10511
@@ -24,7 +23,6 @@ standards:
       - system: DIN
         code: "985"
     image: /images/standards/iso_10511.png
-    jscad: iso10511
 
   - id: iso10642
     primary_system: DIN
@@ -36,7 +34,6 @@ standards:
       - system: DIN
         code: "7991"
     image: /images/standards/iso_10642.png
-    jscad: iso10642
 
   - id: iso4032
     primary_system: DIN
@@ -48,7 +45,6 @@ standards:
       - system: DIN
         code: "934"
     image: /images/standards/iso_4032.png
-    jscad: iso4032
 
   - id: iso4762
     primary_system: DIN
@@ -60,7 +56,6 @@ standards:
       - system: DIN
         code: "912"
     image: /images/standards/iso_4762.png
-    jscad: iso4762
 
   - id: iso7089
     primary_system: DIN
@@ -72,7 +67,6 @@ standards:
       - system: DIN
         code: "125"
     image: /images/standards/iso_7089.png
-    jscad: iso7089
 
   - id: iso7380
     primary_system: DIN
@@ -84,4 +78,3 @@ standards:
       - system: DIN
         code: "9427"
     image: /images/standards/iso_7380.png
-    jscad: iso7380

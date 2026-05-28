@@ -70,8 +70,6 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
       ctx.scale((w * scale) / 24, (h * scale) / 24);
       ctx.fill(new Path2D(content.iconPath));
       ctx.restore();
-    } else if (content.jscadOutlines) {
-      drawJscadOutlines(ctx, content.jscadOutlines, content.jscadBbox, layout.image, scale);
     } else if (content.standard?.image) {
       try {
         const img = await loadImage(assetUrl(content.standard.image));
@@ -127,9 +125,8 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
 
 async function computeLayout(ctx, content, pw, ph, scale) {
   const hasImage  = content.imageSource === 'drawing' && !!content.standard?.image;
-  const hasJscad  = content.imageSource === 'drawing' && !!content.jscadOutlines;
   const hasIcon   = (content.imageSource === 'mdi' || content.imageSource === 'custom') && !!content.iconPath;
-  const hasVisual = hasImage || hasJscad || hasIcon;
+  const hasVisual = hasImage || hasIcon;
   const hasQR = content.showQRCode && content.qrCodeUrl;
   const hasPrimary = !!content.primaryText;
   const hasSecondary = !!content.secondaryText;
@@ -155,9 +152,6 @@ async function computeLayout(ctx, content, pw, ph, scale) {
     let ar;
     if (hasIcon) {
       ar = 1;  // MDI/custom icons are square (24×24 viewBox)
-    } else if (hasJscad) {
-      const { minX, minY, maxX, maxY } = content.jscadBbox;
-      ar = (maxX - minX) / Math.max(maxY - minY, 0.001);
     } else {
       ar = await getImageAspectRatio(assetUrl(content.standard?.image));
     }
@@ -270,39 +264,6 @@ async function getImageAspectRatio(src) {
     aspectCache.set(src, ar);
     return ar;
   } catch { return 1; }
-}
-
-function drawJscadOutlines(ctx, outlines, bbox, layout, scale) {
-  const { minX, minY, maxX, maxY } = bbox;
-  const geoW = maxX - minX;
-  const geoH = maxY - minY;
-  if (geoW <= 0 || geoH <= 0) return;
-
-  const destW = layout.w * scale;
-  const destH = layout.h * scale;
-  const geoScale = Math.min(destW / geoW, destH / geoH);
-
-  // Centre within the allocated rect
-  const offX = layout.x * scale + (destW - geoW * geoScale) / 2;
-  const offY = layout.y * scale + (destH - geoH * geoScale) / 2;
-
-  ctx.save();
-  ctx.translate(offX, offY + geoH * geoScale);  // bottom-left of centred geometry rect
-  ctx.scale(geoScale, -geoScale);               // flip Y: JSCAD Y-up → canvas Y-down
-  ctx.translate(-minX, -minY);
-
-  const path = new Path2D();
-  for (const outline of outlines) {
-    if (outline.length < 2) continue;
-    path.moveTo(outline[0][0], outline[0][1]);
-    for (let i = 1; i < outline.length; i++) {
-      path.lineTo(outline[i][0], outline[i][1]);
-    }
-    path.closePath();
-  }
-  ctx.fillStyle = '#000000';
-  ctx.fill(path, 'evenodd');
-  ctx.restore();
 }
 
 async function generateQR(url, sizePx) {

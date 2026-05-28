@@ -74,6 +74,8 @@ CI (`hardware-gen.yml`) runs `generate_standards_json.py --check` and `generate_
 
 > **Version bump required**: `standards.json` is a frontend JSON file — any regeneration that changes its content must also increment `VERSION` and `APP_VERSION` per the mandatory atomic rules above.
 
+Standards render in the app from each entry's generated PNG `image`.
+
 ---
 
 ## Custom Images Workflow
@@ -92,13 +94,4 @@ To add or modify a custom image:
 The generator validates each SVG (non-empty `<title>`, at least one `<desc>`
 keyword, at least one `<path d>`, conforming filename) and fails CI otherwise.
 Same version-bump rule applies — `custom-icons.json` is a frontend JSON file.
-
----
-
-### standards-jscad/
-
-> **Legacy.** These per-shape JSCAD files are no longer loaded by the app or the
-> contribute page (standards now render from their generated PNG `image`). Kept
-> for reference only; safe to remove in a future cleanup along with the unused
-> `jscad` field in `standards.json`.
 

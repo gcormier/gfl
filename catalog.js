@@ -1,43 +1,4 @@
 
-// ─── JSCad State ──────────────────────────────────────────────────────────────
-
-let selectedJscadOutlines = null;
-let selectedJscadBbox     = null;
-
-function setJscadResult(outlines, bbox) {
-  selectedJscadOutlines = outlines;
-  selectedJscadBbox     = bbox;
-}
-
-async function loadJscadStandard(id) {
-  const url = assetUrl('standards-jscad/' + id + '.js');
-  return new Promise((resolve, reject) => {
-    if (typeof _jscadRegistry !== 'undefined' && _jscadRegistry.has(id)) {
-      const { code } = _jscadRegistry.get(id);
-      resolve(code);
-      return;
-    }
-    const callbacks = (typeof _jscadPending !== 'undefined' && _jscadPending.get(id)) || [];
-    if (typeof _jscadPending !== 'undefined') {
-      callbacks.push({ resolve, reject });
-      _jscadPending.set(id, callbacks);
-    }
-    if (!document.querySelector(`script[data-jscad="${id}"]`)) {
-      const s = document.createElement('script');
-      s.src = url;
-      s.dataset.jscad = id;
-      s.onerror = () => reject(new Error('Failed to load standard: ' + id));
-      document.head.appendChild(s);
-    }
-    setTimeout(() => {
-      if (typeof _jscadPending !== 'undefined' && _jscadPending.has(id)) {
-        _jscadPending.delete(id);
-        reject(new Error('Timeout loading standard: ' + id));
-      }
-    }, 8000);
-  });
-}
-
 async function loadStandards() {
   try {
     const res = await fetch(assetUrl('standards.json'));
@@ -143,8 +104,6 @@ function selectStandard(s) {
 
 function clearStandard() {
   selectedStandard = null;
-  selectedJscadOutlines = null;
-  selectedJscadBbox     = null;
   document.getElementById('selectedStandard').hidden = true;
   document.getElementById('standardPrefGroup').hidden = true;
   document.getElementById('standardSearch').value = '';
@@ -453,8 +412,6 @@ function buildLabelContent() {
     showMargins: document.getElementById('showMargins').checked,
     qrCodeUrl: document.getElementById('qrUrl').value.trim(),
     standard: selectedStandard,
-    jscadOutlines: (imgSrc === 'drawing') ? selectedJscadOutlines : null,
-    jscadBbox:     (imgSrc === 'drawing') ? selectedJscadBbox     : null,
   };
 }
 const MDI_VERSION  = '7.4.47';
