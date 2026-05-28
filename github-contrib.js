@@ -2,115 +2,85 @@
 
 // ─── GitHub Contribution Flow ─────────────────────────────────────────────────
 // Static-site safe: no OAuth, no API tokens, no backend. Opens GitHub's
-// "create new file" page in a new tab, pre-filled with the standard contents.
-// GitHub handles fork + branch + commit + PR through its own UI.
+// "create new file" page in a new tab, pre-filled with a single SVG file under
+// images/custom/. GitHub handles fork + branch + commit + PR through its own UI.
+// CI regenerates custom-icons.json from the directory, so contributors only ever
+// touch one file.
 
 const GH_ORIGIN = 'gcormier/gfl';
 const GH_BRANCH = 'main';
 
-function buildStandardFile(id, code) {
-  return `registerJscadStandard('${id}', \`\n${code}\n\`);\n`;
-}
-
 function _sanitizeId(raw) {
-  return (raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  return (raw || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
 }
 
-function _buildNewFileUrl(id, code) {
-  const filename = `${id}.js`;
-  const content = buildStandardFile(id, code);
+function _escXml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// Inject <title> (name) and <desc> (keywords) metadata into the exported SVG so
+// the icon-manifest generator can read it back. The frontend reads only the
+// first <path d="…">, but the metadata is what makes the icon searchable.
+function _svgWithMetadata(svgMarkup, name, keywords) {
+  const meta = `\n  <title>${_escXml(name)}</title>\n  <desc>${_escXml(keywords)}</desc>`;
+  return svgMarkup.replace(/(<svg\b[^>]*>)/, `$1${meta}`);
+}
+
+function _buildNewFileUrl(id, content) {
   const params = new URLSearchParams({
-    filename,
+    filename: `${id}.svg`,
     value: content,
-    message: `Add JSCad standard: ${id}`,
-    description: 'Contributed via the GFL in-browser editor.',
+    message: `Add custom icon: ${id}`,
+    description: 'Contributed via the GFL in-browser image editor.',
   });
-  return `https://github.com/${GH_ORIGIN}/new/${GH_BRANCH}/standards-jscad?${params.toString()}`;
-}
-
-function _buildEditFileUrl(id) {
-  // GitHub's /edit/ endpoint does not support pre-filling content via URL params.
-  // We copy content to clipboard and ask the user to paste.
-  return `https://github.com/${GH_ORIGIN}/edit/${GH_BRANCH}/standards-jscad/${id}.js`;
+  return `https://github.com/${GH_ORIGIN}/new/${GH_BRANCH}/images/custom?${params.toString()}`;
 }
 
 // ─── Modal UI ─────────────────────────────────────────────────────────────────
 
-let _pendingCode = '';
-let _pendingIsExisting = false;
+let _pendingSvg = '';
 
-function openContribModal(standardId, code, isExisting) {
-  console.log('[github-contrib] openContribModal standardId=', standardId, 'isExisting=', isExisting);
+// Called by jscad-editor.js with the exported SVG markup (single <path>).
+function openContribModal(svgMarkup) {
   const overlay = document.getElementById('contribOverlay');
   if (!overlay) return;
 
-  _pendingCode = code || '';
-  _pendingIsExisting = !!isExisting;
+  _pendingSvg = svgMarkup || '';
 
-  const title = document.getElementById('contribModalTitle');
-  const idRow = document.getElementById('contribIdRow');
-  const input = document.getElementById('contribStdIdInput');
   const errEl = document.getElementById('contribErrorMsg');
-
-  const hintNew  = document.getElementById('contribHintNew');
-  const hintEdit = document.getElementById('contribHintEdit');
-
-  if (_pendingIsExisting) {
-    if (title)    title.textContent = 'Propose Changes to Standard';
-    if (idRow)    idRow.hidden    = true;
-    if (hintNew)  hintNew.hidden  = true;
-    if (hintEdit) hintEdit.hidden = false;
-  } else {
-    if (title)    title.textContent = 'Submit New Standard as PR';
-    if (idRow)    idRow.hidden    = false;
-    if (hintNew)  hintNew.hidden  = false;
-    if (hintEdit) hintEdit.hidden = true;
-    if (input) {
-      input.value = standardId ? _sanitizeId(standardId) : '';
-      setTimeout(() => input.focus(), 0);
-    }
-  }
-
   if (errEl) errEl.textContent = '';
-  overlay.hidden = false;
-  _pendingId = standardId ? _sanitizeId(standardId) : '';
-}
 
-let _pendingId = '';
+  overlay.hidden = false;
+  const nameInput = document.getElementById('contribNameInput');
+  if (nameInput) setTimeout(() => nameInput.focus(), 0);
+}
 
 function submitContribModal() {
   const errEl = document.getElementById('contribErrorMsg');
+  const setErr = msg => { if (errEl) errEl.textContent = msg; };
 
-  let id;
-  if (_pendingIsExisting) {
-    id = _pendingId;
-  } else {
-    const input = document.getElementById('contribStdIdInput');
-    id = _sanitizeId(input ? input.value : '');
-  }
+  const name     = (document.getElementById('contribNameInput')?.value || '').trim();
+  const keywords = (document.getElementById('contribKeywordsInput')?.value || '').trim();
+  const idRaw    = (document.getElementById('contribStdIdInput')?.value || '').trim();
+  const id       = _sanitizeId(idRaw || name);
 
-  if (!id) {
-    if (errEl) errEl.textContent = 'Please enter a standard ID (letters, digits, dashes).';
-    return;
-  }
+  if (!name)     { setErr('Please enter a name.'); return; }
+  if (!keywords) { setErr('Please enter at least one keyword.'); return; }
+  if (!id)       { setErr('Please enter a filename id (letters, digits, dashes).'); return; }
+  if (!_pendingSvg) { setErr('No shape to submit — run your design first.'); return; }
 
-  if (_pendingIsExisting) {
-    const content = buildStandardFile(id, _pendingCode);
-    console.log('[github-contrib] modify flow — copying to clipboard, content length=', content.length);
-    navigator.clipboard.writeText(content)
-      .then(() => console.log('[github-contrib] clipboard write succeeded'))
-      .catch(err => console.warn('[github-contrib] clipboard write failed:', err));
-    window.open(_buildEditFileUrl(id), '_blank', 'noopener');
-    closeContribModal();
-    return;
-  }
+  const content = _svgWithMetadata(_pendingSvg, name, keywords);
+  const url = _buildNewFileUrl(id, content);
 
-  const url = _buildNewFileUrl(id, _pendingCode);
-  // URL length cap: GitHub silently rejects very long URLs (~8KB practical limit)
+  // URL length cap: GitHub silently rejects very long URLs (~8KB practical limit).
   if (url.length > 7800) {
-    if (errEl) errEl.textContent = 'Standard code is too large for the URL-based flow. Please open a PR manually.';
+    setErr('This shape is too detailed for the URL-based flow. Try the Simplify slider, or open a PR manually.');
     return;
   }
+
   window.open(url, '_blank', 'noopener');
   closeContribModal();
 }

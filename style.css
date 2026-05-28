@@ -1245,6 +1245,11 @@ html.contrib-page #app  { height: auto; min-height: 100vh; display: flex; flex-d
   flex: 1;
 }
 
+.contrib-layout.contrib-layout-single {
+  grid-template-columns: minmax(0, 900px);
+  justify-content: center;
+}
+
 /* ─── Browse Column ─────────────────────────────────────────────────────────── */
 
 .contrib-browse-col {

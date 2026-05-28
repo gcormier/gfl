@@ -1,78 +1,114 @@
-# Contributing a Standard
+# Contributing
 
-The GFL standards catalog ships with a small set of sample fastener icons
-defined in **[JSCad](https://openjscad.xyz/)** — a JavaScript-based parametric
-2D/3D CAD library. Every icon in `standards-jscad/*.js` is a tiny program that
-returns a 2D outline; the app renders it onto the label canvas at print time.
+There are two kinds of artwork you can contribute to GFL, and they use
+different paths:
 
-The easiest way to contribute a new standard is **directly in the browser**, no
-local tooling required.
+- **Hardware standards** (ISO/DIN fasteners) — generated from a config file by
+  the `hardware-gen` pipeline. See *Contributing a standard* below.
+- **Custom images** (any icon you want available in the label editor) — drawn
+  or traced in the browser and submitted as a single SVG. See *Contributing a
+  custom image* below.
 
-## In-browser flow (recommended)
+---
 
-1. Open the app at <https://gcormier.github.io/gfl/>.
-2. In the **Design** panel, edit the JSCad code in the editor. Click **▶ Run**
-   to see the preview update.
-3. When you're happy with the icon, click **Submit Standard…**
-4. Enter an ID for the standard (lowercase letters, digits, dashes — this
-   becomes the filename, e.g. `iso4762` → `standards-jscad/iso4762.js`).
-5. Click **Open on GitHub →**. A new tab opens on github.com with the file
-   contents pre-filled. GitHub will offer to fork the repo, then walk you
-   through committing and opening a pull request.
+## Contributing a custom image (recommended for most people)
 
-No tokens, no OAuth, no local clone needed.
+Custom images live in [`images/custom/`](images/custom/) as plain SVG files and
+show up in the app under **Icon → Custom**. The manifest the app reads
+(`custom-icons.json`) is **generated** from that directory — you only ever edit
+one SVG file.
 
-## File format
+### In-browser flow
 
-Each standard is a single JS file that calls `registerJscadStandard(id, code)`
-with a template-literal body:
+1. Open the contribute page: <https://gcormier.github.io/gfl/contribute.html>
+   (or **Icon → Custom → Create or contribute a custom image →** in the app).
+2. **Generate from Image** (optional) — drop or paste an engineering drawing /
+   logo / silhouette and drag to select a region. Tune **Threshold** and
+   **Simplify**, then **Insert into Editor**.
+3. **Design (JSCad)** — refine the outline, or write 2D geometry from scratch.
+   `main()` must return a single 2D shape. Click **▶ Run** to preview.
+4. Click **Submit Custom Image…**, enter a **Name**, **Keywords** (comma
+   separated — used for search), and a **filename id** (lowercase letters,
+   digits, dashes, e.g. `hex-wrench`).
+5. Click **Open on GitHub →**. A new tab opens with the SVG pre-filled. GitHub
+   offers to fork the repo and walks you through opening a pull request.
 
-```js
-registerJscadStandard('iso4762', `// ISO 4762 — Hexagon Socket Head Cap Screw
-const { circle, rectangle, polygon } = primitives;
-const { subtract, union } = booleans;
-const { translate } = transforms;
+No tokens, no OAuth, no local clone needed. Once merged, the icon appears under
+**Icon → Custom** for everyone. While your PR is in review you can **Export
+SVG ↓** and use it immediately via **Icon → Upload SVG…**.
 
-function main() {
-  // ... build geometry, return a JSCad 2D shape
-}
-`);
+### SVG metadata (required)
+
+Each contributed SVG must be self-describing so the manifest can be rebuilt from
+the directory alone. The contribute page writes this for you, but if you
+hand-craft an SVG it must contain:
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <title>Hex Wrench</title>           <!-- name (required, non-empty) -->
+  <desc>tool, allen, hardware</desc>   <!-- comma-separated keywords (required) -->
+  <path d="…"/>                        <!-- at least one path (required) -->
+</svg>
 ```
 
-The inner code runs inside a sandboxed Web Worker with the
-[`@jscad/modeling`](https://www.npmjs.com/package/@jscad/modeling) API exposed
-as globals: `primitives`, `booleans`, `transforms`, `extrusions`, etc. Your
-`main()` must return a 2D geometry (or an array of them).
+The app reads only the **first** `<path d="…">`. CI fails any SVG missing a
+`<title>`, `<desc>` keywords, or a path, or with a non-conforming filename.
+Note: SVG optimizers (e.g. SVGO) strip `<title>`/`<desc>` by default — don't run
+one, or re-add the metadata afterward.
 
-Look at the existing samples in [`standards-jscad/`](standards-jscad/) for
-working examples:
+### Regenerating the manifest locally (optional)
 
-| File | Standard |
-|------|----------|
-| `iso4762.js` | Socket head cap screw |
-| `iso10642.js` | Flat (countersunk) head screw |
-| `iso7380.js`  | Button head screw |
-| `iso4032.js`  | Hex nut |
-| `iso10511.js` | Nylon-insert lock nut |
-| `iso7089.js`  | Plain washer |
+```bash
+cd hardware-gen
+uv run python generate_custom_icons.py          # rebuild ../custom-icons.json
+uv run python generate_custom_icons.py --check   # validate + verify in sync
+```
 
-## Local editing (optional)
+---
 
-If you'd rather work locally:
+## Contributing a standard
+
+Hardware standards (the searchable ISO/DIN fastener catalog) are **not** drawn
+by hand. They are generated by the `hardware-gen` pipeline from a single
+source-of-truth YAML config, with accurate geometry produced by FreeCAD + the
+Fasteners workbench.
+
+`standards.json` (root) is a **generated artifact** — never edit it directly.
+
+To add or change a standard:
+
+1. Edit the relevant config under
+   [`hardware-gen/config/`](hardware-gen/config/) — `standards_meta.yaml` for the
+   web catalog metadata, plus the fastener configs (`bolts_screws.yaml`,
+   `nuts.yaml`, `washers.yaml`, `misc.yaml`) for geometry.
+2. Run the generator (see [`hardware-gen/README.md`](hardware-gen/README.md) for
+   the FreeCAD setup):
+
+   ```bash
+   cd hardware-gen
+   uv run generate.py                       # 3D solids + 2D SVGs
+   uv run python generate_standards_json.py # rebuild ../standards.json
+   ```
+3. Commit the YAML, the regenerated images, and `standards.json`.
+
+CI (`hardware-gen.yml`) validates that the committed `standards.json` and
+`custom-icons.json` are in sync with their sources on every relevant push/PR.
+
+### Naming
+
+Prefer the **ISO** number when both ISO and DIN equivalents exist (ISO is
+international). Standard ids use lowercase with no separators, e.g. `iso4762`.
+
+---
+
+## Local development
 
 ```bash
 git clone https://github.com/gcormier/gfl.git
 cd gfl
-# Open index.html via any static file server, e.g.:
-python -m http.server 8000
-# Then visit http://localhost:8000/
+python -m http.server 8000   # then visit http://localhost:8000/
 ```
 
-Edit a file under `standards-jscad/`, reload the page, and your changes show up
-in the editor. Commit and open a PR the usual way.
-
-## Naming
-
-Prefer the **ISO** number when both ISO and DIN equivalents exist (ISO is
-international). Filenames use lowercase with no separators, e.g. `iso4762.js`,
-not `ISO-4762.js`.
+The frontend is plain static files — no build step. Any change to HTML/CSS/JS/
+JSON requires bumping the version in the `VERSION` file and `APP_VERSION` in
+`app.js`.

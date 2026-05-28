@@ -4,10 +4,16 @@ on:
   push:
     paths:
       - "hardware-gen/config/**"
+      - "hardware-gen/generate_custom_icons.py"
+      - "images/custom/**"
+      - "custom-icons.json"
       - ".github/workflows/hardware-gen.yml"
   pull_request:
     paths:
       - "hardware-gen/config/**"
+      - "hardware-gen/generate_custom_icons.py"
+      - "images/custom/**"
+      - "custom-icons.json"
       - ".github/workflows/hardware-gen.yml"
   workflow_dispatch:
     inputs:
@@ -71,6 +77,9 @@ jobs:
 
       - name: Check standards.json is up to date
         run: uv run python generate_standards_json.py --check
+
+      - name: Check custom-icons.json is up to date (validates SVG metadata)
+        run: uv run python generate_custom_icons.py --check
 
   # ── Full generation (requires FreeCAD) ────────────────────────────────────
   generate:

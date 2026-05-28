@@ -2,6 +2,12 @@
   {
     "id": "smiley-face",
     "name": "Smiley Face",
-    "file": "smiley-face.svg"
+    "file": "smiley-face.svg",
+    "tags": [
+      "smiley",
+      "happy",
+      "face",
+      "emoji"
+    ]
   }
 ]

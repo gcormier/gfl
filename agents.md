@@ -7,7 +7,8 @@
 **Technical Stack:**
 - **Frontend**: Pure client-side JavaScript (no build step), hosted on GitHub Pages. Core modules handle rendering (`renderer.js`), JSCAD geometry evaluation in a Web Worker (`jscad-worker.js`), icon/standard catalog browsing (`catalog.js`), and the GitHub contribution flow (`github-contrib.js`).
 - **Print Agent**: A local Python HTTP server (`print-agent/agent.py`) running on `localhost:9100` via `uv run`. It receives base64 PNG label images from the browser and converts them to Brother raster protocol data for USB printing.
-- **Standards**: Community-contributed JSCAD shape definitions (`standards-jscad/`) and a `standards.json` catalog define the available parametric label standards. `standards.json` is a **generated file** — source of truth is `hardware-gen/config/standards_meta.yaml`.
+- **Standards**: The `standards.json` catalog defines the available hardware label standards and is rendered in the app from each standard's generated PNG `image`. `standards.json` is a **generated file** — source of truth is `hardware-gen/config/standards_meta.yaml` (geometry from the FreeCAD pipeline). Standards are no longer user-contributable in the browser.
+- **Custom images**: Community-contributed icons live in `images/custom/*.svg` and surface under **Icon → Custom**. The `custom-icons.json` manifest is a **generated file** — source of truth is the SVGs themselves (name/keywords carried in each SVG's `<title>`/`<desc>`). Authored and submitted via `contribute.html`.
 
 ---
 
@@ -53,10 +54,10 @@ To help navigate the frontend codebase quickly, here is the breakdown of the cor
 - **`catalog.js`**: Fetches the design standards (`standards.json`) and manages the search/filtering functionalities for the standard catalog pane. Also exposes `setJscadResult()` for the JSCAD editor to inject geometry into the label pipeline.
 - **`printer.js`**: Contains the logic and UI behaviors for printing, polling local Print Agents (`pollAgentStatus`), managing the print queue, and dealing with remote USB paths.
 - **`renderer.js`**: The rendering engine. Handles drawing the user-selected icons, text layout, scaling onto the front-end `<canvas>` element, and rendering JSCAD geometry outlines via `drawJscadOutlines()`.
-- **`jscad-editor.js`**: The Design panel module. Manages the in-browser JSCAD code editor, the standard registry (`registerJscadStandard`), spawning `jscad-worker.js` to evaluate code, and displaying the resulting geometry preview. Communicates with the rest of the app only via `setJscadResult()` and `scheduleRender()`.
+- **`jscad-editor.js`**: The custom-image designer on `contribute.html`. Manages the in-browser JSCAD code editor, spawns `jscad-worker.js` to evaluate code, displays the geometry preview, and exports the result as a single-path SVG. Submitting hands that SVG to `github-contrib.js`. (Not loaded by the main app.)
 - **`jscad-worker.js`**: A Web Worker that safely evaluates user-supplied JSCAD code in a sandboxed context (no DOM access). Imports the `@jscad/modeling` library via `importScripts`, runs the code, and posts back the resulting geometry or an error.
 - **`image-trace.js`**: Converts a raster image (bitmap) into a set of vector outlines suitable for use as a JSCAD standard. Implements Ramer–Douglas–Peucker simplification, SVG path parsing, and canvas-based pixel tracing.
-- **`github-contrib.js`**: Handles the "Contribute" flow. Builds a GitHub "create new file" URL pre-filled with the standard contents, then opens it in a new tab — no OAuth or backend required; GitHub's own UI handles the fork/PR flow.
+- **`github-contrib.js`**: Handles the custom-image "Contribute" flow. Takes the exported SVG, injects `<title>`/`<desc>` metadata (name + keywords) collected in the modal, and builds a GitHub "create new file" URL pre-filled with a single `images/custom/<id>.svg` file, then opens it in a new tab — no OAuth or backend required; GitHub's own UI handles the fork/PR flow.
 
 ## Hardware Standards Workflow
 
@@ -69,13 +70,35 @@ To add or modify a standard:
 2. Run `python hardware-gen/generate_standards_json.py` from the repo root
 3. Commit both the YAML and the updated `standards.json`
 
-CI (`hardware-gen.yml`) runs `generate_standards_json.py --check` on every push that touches `hardware-gen/config/` and will fail if `standards.json` is out of sync.
+CI (`hardware-gen.yml`) runs `generate_standards_json.py --check` and `generate_custom_icons.py --check` on every push that touches `hardware-gen/config/`, `images/custom/`, or the generators, and fails if either generated file is out of sync.
 
 > **Version bump required**: `standards.json` is a frontend JSON file — any regeneration that changes its content must also increment `VERSION` and `APP_VERSION` per the mandatory atomic rules above.
 
 ---
 
+## Custom Images Workflow
+
+`custom-icons.json` (root) is **generated** — never edit it by hand.
+
+**Source of truth**: the SVG files in `images/custom/`. Each SVG carries its own
+metadata: `<title>` = display name, `<desc>` = comma-separated search keywords.
+The frontend reads only the first `<path d="…">` from each file.
+
+To add or modify a custom image:
+1. Add/edit an SVG under `images/custom/` (or author one via `contribute.html`)
+2. Run `python hardware-gen/generate_custom_icons.py` from the repo root
+3. Commit both the SVG and the updated `custom-icons.json`
+
+The generator validates each SVG (non-empty `<title>`, at least one `<desc>`
+keyword, at least one `<path d>`, conforming filename) and fails CI otherwise.
+Same version-bump rule applies — `custom-icons.json` is a frontend JSON file.
+
+---
+
 ### standards-jscad/
 
-Each file in this directory registers one JSCAD standard shape by calling `window.registerJscadStandard(id, code)`. Current standards:
+> **Legacy.** These per-shape JSCAD files are no longer loaded by the app or the
+> contribute page (standards now render from their generated PNG `image`). Kept
+> for reference only; safe to remove in a future cleanup along with the unused
+> `jscad` field in `standards.json`.
 

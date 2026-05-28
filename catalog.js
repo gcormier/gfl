@@ -138,27 +138,6 @@ function selectStandard(s) {
 
   updateStarButtons();
 
-  // Load JSCad definition if available
-  selectedJscadOutlines = null;
-  selectedJscadBbox     = null;
-  const editLink = document.getElementById('editInDesignerLink');
-  if (s.jscad) {
-    loadJscadStandard(s.jscad)
-      .then(code => typeof runJscadCode === 'function' ? runJscadCode(code) : Promise.reject())
-      .then(result => {
-        selectedJscadOutlines = result.outlines;
-        selectedJscadBbox     = result.bbox;
-        scheduleRender();
-      })
-      .catch(() => { /* fall back to PNG if jscad fails */ });
-    if (editLink) {
-      editLink.href   = 'contribute.html?standard=' + encodeURIComponent(s.jscad);
-      editLink.hidden = false;
-    }
-  } else {
-    if (editLink) editLink.hidden = true;
-  }
-
   scheduleRender();
 }
 
@@ -169,8 +148,6 @@ function clearStandard() {
   document.getElementById('selectedStandard').hidden = true;
   document.getElementById('standardPrefGroup').hidden = true;
   document.getElementById('standardSearch').value = '';
-  const editLink = document.getElementById('editInDesignerLink');
-  if (editLink) editLink.hidden = true;
   updateStarButtons();
   scheduleRender();
 }

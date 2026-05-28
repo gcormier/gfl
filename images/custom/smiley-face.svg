@@ -1,3 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <title>Smiley Face</title>
+  <desc>smiley, happy, face, emoji</desc>
   <path d="M2 12A10 10 0 1 0 22 12A10 10 0 1 0 2 12ZM4 12A8 8 0 1 1 20 12A8 8 0 1 1 4 12ZM7 9.5A1.5 1.5 0 1 0 10 9.5A1.5 1.5 0 1 0 7 9.5ZM14 9.5A1.5 1.5 0 1 0 17 9.5A1.5 1.5 0 1 0 14 9.5ZM8 14Q12 19 16 14Q12 16 8 14Z"/>
 </svg>

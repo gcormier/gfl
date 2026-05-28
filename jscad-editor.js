@@ -1,24 +1,8 @@
 'use strict';
 
 // ─── JSCad Editor ─────────────────────────────────────────────────────────────
-// Isolated module for the Design panel. Only touches the main app via:
-//   - setJscadResult(outlines, bbox) — sets state in catalog.js
-//   - scheduleRender() — triggers label canvas redraw
-// All editor HTML lives in #jscadSection and can be relocated independently.
-
-// ─── Standard Registry ────────────────────────────────────────────────────────
-// standards-jscad/*.js files call window.registerJscadStandard() to register.
-
-const _jscadRegistry = new Map(); // id → { code: string }
-const _jscadPending  = new Map(); // id → { resolve, reject }[]
-
-window.registerJscadStandard = function (id, code) {
-  _jscadRegistry.set(id, { code });
-  if (_jscadPending.has(id)) {
-    _jscadPending.get(id).forEach(({ resolve }) => resolve(code));
-    _jscadPending.delete(id);
-  }
-};
+// Isolated module for the custom-image designer on contribute.html. Designs are
+// exported as a single-path SVG and submitted to images/custom/ via github-contrib.js.
 
 // ─── Worker Lifecycle ─────────────────────────────────────────────────────────
 
@@ -102,10 +86,9 @@ let _editorGetValue = null;   // () => string — returns current code
 let _editorSetValue = null;   // (string) => void — sets code
 let _lastResult = null;       // { outlines, bbox } of most recent successful run
 let _runDebounce = null;
-let _currentStandardId = null; // id if editor is showing a known standard
 
-const DEFAULT_TEMPLATE = `// JSCad standard definition
-// Inject namespaces are available: primitives, booleans, transforms, expansions, hulls
+const DEFAULT_TEMPLATE = `// JSCad custom-image definition
+// Injected namespaces are available: primitives, booleans, transforms, expansions, hulls
 // main() must return 2D geometry (geom2)
 
 const { circle, rectangle, polygon } = primitives;
@@ -156,62 +139,6 @@ function _scheduleRun() {
   _runDebounce = setTimeout(_runAndPreview, 400);
 }
 
-// ─── Load a Known Standard into the Editor ───────────────────────────────────
-
-function _updateSubmitLabel() {
-  const btn = document.getElementById('jscadSubmitBtn');
-  if (!btn) return;
-  btn.textContent = _currentStandardId ? 'Modify Standard…' : 'Submit New Standard…';
-}
-
-async function loadJscadStandard(id) {
-  _currentStandardId = id;
-  _updateSubmitLabel();
-
-  // Fetch the source text for the editor display
-  let code = null;
-  const url = assetUrl('standards-jscad/' + id + '.js');
-
-  try {
-    const res = await fetch(url);
-    if (res.ok) {
-      const raw = await res.text();
-      // Strip the registerJscadStandard wrapper — expose just the inner body
-      // for editing. The file format wraps code in registerJscadStandard(id, `...`).
-      const inner = raw.match(/registerJscadStandard\(\s*['"][^'"]+['"]\s*,\s*`([\s\S]*)`\s*\)/);
-      code = inner ? inner[1].trim() : raw;
-    }
-  } catch { /* fall through to template */ }
-
-  if (!code) code = DEFAULT_TEMPLATE;
-
-  if (_editorSetValue) _editorSetValue(code);
-
-  // Also inject the <script> so the registry gets the factory for catalog rendering
-  return new Promise((resolve, reject) => {
-    if (_jscadRegistry.has(id)) { resolve(_jscadRegistry.get(id).code); return; }
-
-    const callbacks = _jscadPending.get(id) || [];
-    callbacks.push({ resolve, reject });
-    _jscadPending.set(id, callbacks);
-
-    if (!document.querySelector(`script[data-jscad="${id}"]`)) {
-      const s = document.createElement('script');
-      s.src = url;
-      s.dataset.jscad = id;
-      s.onerror = () => reject(new Error('Failed to load ' + url));
-      document.head.appendChild(s);
-    }
-
-    setTimeout(() => {
-      if (_jscadPending.has(id)) {
-        _jscadPending.get(id).forEach(({ reject: r }) => r(new Error('Timeout loading ' + id)));
-        _jscadPending.delete(id);
-      }
-    }, 8000);
-  });
-}
-
 // ─── SVG Export ───────────────────────────────────────────────────────────────
 
 function _outlinesToSvg(outlines, bbox) {
@@ -238,7 +165,7 @@ function _exportSvg() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = (_currentStandardId || 'standard') + '.svg';
+  a.download = 'icon.svg';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -320,57 +247,17 @@ async function initJscadEditor() {
 
   const submitBtn2 = document.getElementById('jscadSubmitBtn');
   submitBtn2.addEventListener('click', () => {
-    const code = _editorGetValue ? _editorGetValue() : '';
-    console.log('[jscad-editor] submit clicked, _currentStandardId=', _currentStandardId, 'isExisting=', !!_currentStandardId, 'codeLen=', code.length);
-    openContribModal(_currentStandardId, code, !!_currentStandardId);
+    if (!_lastResult) return;
+    const svg = _outlinesToSvg(_lastResult.outlines, _lastResult.bbox);
+    openContribModal(svg); // defined in github-contrib.js
   });
 
   // Run the default template once on load
   _runAndPreview();
 }
 
-// Called by catalog.js when a standard with a jscad definition is selected.
-function loadStandardIntoEditor(id) {
-  loadJscadStandard(id);
-}
-
-function clearEditorStandard() {
-  _currentStandardId = null;
-  _updateSubmitLabel();
-}
-
 // Sets the editor to arbitrary code (used by image-trace.js after tracing).
 function setEditorCode(code) {
   if (_editorSetValue) _editorSetValue(code);
-  clearEditorStandard();
   _scheduleRun();
-}
-
-// Resets the editor to the blank template (used by the contribute page "New standard" card).
-function resetEditorToTemplate() {
-  if (_editorSetValue) _editorSetValue(DEFAULT_TEMPLATE);
-  clearEditorStandard();
-  _runAndPreview();
-}
-
-// Fetches and renders a JSCAD standard into an arbitrary canvas element.
-// Used by the standards browser on contribute.html for preview thumbnails.
-async function renderStandardIntoCanvas(id, canvas) {
-  let code = _jscadRegistry.has(id) ? _jscadRegistry.get(id).code : null;
-  if (!code) {
-    const url = assetUrl('standards-jscad/' + id + '.js');
-    try {
-      const res = await fetch(url);
-      if (res.ok) {
-        const raw   = await res.text();
-        const inner = raw.match(/registerJscadStandard\(\s*['"][^'"]+['"]\s*,\s*`([\s\S]*)`\s*\)/);
-        code = inner ? inner[1].trim() : null;
-      }
-    } catch { /* ignore */ }
-  }
-  if (!code) return;
-  try {
-    const result = await runJscadCode(code);
-    renderPreview(canvas, result.outlines, result.bbox);
-  } catch { /* ignore */ }
 }
