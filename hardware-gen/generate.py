@@ -226,11 +226,12 @@ def main() -> int:
             failed += 1
             continue
 
-        if not config.fasteners:
-            log.warning("No fasteners defined in: %s", config_path)
+        specs = config.fastener_specs()
+        if not specs:
+            log.warning("No renders defined in: %s", config_path)
             continue
 
-        for spec in config.fasteners:
+        for spec in specs:
             spec = _resolve_spec_standards(spec)
             total += 1
             ok = _run_pipeline(spec, engine, dry_run=args.dry_run, log=log)

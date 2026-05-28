@@ -79,7 +79,7 @@ jobs:
       # not stored in git — so there is no committed file to diff against. We still
       # run the generators here as a validation gate: they parse the source YAML and
       # validate every SVG's metadata, exiting non-zero on any malformed input.
-      - name: Validate standards source (standards_meta.yaml)
+      - name: Validate standards sources (config/*.yaml)
         run: uv run python generate_standards_json.py
 
       - name: Validate custom icon sources (SVG metadata)

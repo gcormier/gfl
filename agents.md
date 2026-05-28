@@ -7,7 +7,7 @@
 **Technical Stack:**
 - **Frontend**: Pure client-side JavaScript (no build step), hosted on GitHub Pages. Core modules handle rendering (`renderer.js`), JSCAD geometry evaluation in a Web Worker (`jscad-worker.js`), icon/standard catalog browsing (`catalog.js`), and the GitHub contribution flow (`github-contrib.js`).
 - **Print Agent**: A local Python HTTP server (`print-agent/agent.py`) running on `localhost:9100` via `uv run`. It receives base64 PNG label images from the browser and converts them to Brother raster protocol data for USB printing.
-- **Standards**: The `standards.json` catalog defines the available hardware label standards and is rendered in the app from each standard's generated PNG `image`. `standards.json` is a **generated file** — source of truth is `hardware-gen/config/standards_meta.yaml` (geometry from the FreeCAD pipeline). Standards are no longer user-contributable in the browser.
+- **Standards**: The `standards.json` catalog defines the available hardware label standards and is rendered in the app from each standard's generated PNG `image`. `standards.json` is a **generated file** — source of truth is the per-hardware-type configs in `hardware-gen/config/` (`bolts_screws.yaml`, `nuts.yaml`, `washers.yaml`, `misc.yaml`; geometry from the FreeCAD pipeline). Standards are no longer user-contributable in the browser.
 - **Custom images**: Community-contributed icons live in `images/custom/*.svg` and surface under **Icon → Custom**. The `custom-icons.json` manifest is a **generated file** — source of truth is the SVGs themselves (name/keywords carried in each SVG's `<title>`/`<desc>`). Authored and submitted via `contribute.html`.
 
 ---
@@ -85,10 +85,42 @@ Two principles drive the direction of this workflow. Weigh changes against them:
 `standards.json` (root) is a **generated, git-ignored artifact** — never edit it by
 hand and never commit it.
 
-**Source of truth**: `hardware-gen/config/standards_meta.yaml`
+**Source of truth**: the per-hardware-type files in `hardware-gen/config/` —
+`bolts_screws.yaml`, `nuts.yaml`, `washers.yaml`, `misc.yaml`. (There is no separate
+metadata file; the old `standards_meta.yaml` was merged into these.)
+
+Each file holds a `standards:` list. A standard entry carries **both** its catalog
+metadata and its geometry recipe, so the two can't drift apart:
+
+```yaml
+# nuts.yaml  → hardware_type "nut" inferred from the filename
+standards:
+  - id: iso4032                 # uppercased, this IS the FreeCAD standard name
+    primary_system: DIN
+    description: "Fasteners - Hexagon regular nuts (style 1)"
+    designations:
+      - { system: ISO, code: "4032" }
+      - { system: DIN, code: "934" }
+    image: /images/standards/iso_4032.png
+    renders:                    # optional — omit/empty for catalog-only standards
+      - name: M8_HexNut
+        size: M8                # length too, for items that have one
+        pipeline: { export_3d: step, export_2d_views: [top] }
+```
+
+Key rules:
+- **`id` ⇒ FreeCAD name.** Geometry is built from `id.upper()` (via `resolve_standard`),
+  so the id must equal the FreeCAD Fasteners workbench name — e.g. `iso7380-1`, **not**
+  `iso7380`. Renders inherit the standard from their parent `id`; they do **not** repeat it.
+- **`hardware_type` is inferred from the filename** (`nuts`→nut, `washers`→washer,
+  `bolts_screws`→screw) via `HARDWARE_TYPE_BY_FILE` in `pipeline/models.py`. `misc.yaml`
+  has no inferred type, so its entries must set `hardware_type` explicitly. Any entry may
+  override the inferred value with an explicit `hardware_type`.
+- **`renders` is optional.** A standard with no render recipe is catalog-only (shows in
+  the list, builds no geometry).
 
 To add or modify a standard:
-1. Edit `hardware-gen/config/standards_meta.yaml` (and add its PNG under `images/standards/`).
+1. Edit the matching `hardware-gen/config/*.yaml` (and add its PNG under `images/standards/`).
 2. Commit **only** the YAML and the image — open a PR. Do **not** generate or commit `standards.json`.
 3. On merge to `main`, `pages.yml` regenerates `standards.json` into the deploy and the standard goes live.
 

@@ -1,9 +1,17 @@
-fasteners:
+# Washers. hardware_type "washer" is inferred from this filename.
 
-  - name: "M8_PlainWasher"
-    standard: "ISO7089"   # DIN125A equivalent
-    size: "M8"
-    # No length for washers; the workbench derives thickness from the standard.
-    pipeline:
-      export_3d: "step"
-      export_2d_views: ["top"]
+standards:
+  - id: iso7089
+    primary_system: DIN
+    description: "Plain washers - Normal series - Product grade A"
+    designations:
+      - { system: ISO, code: "7089" }
+      - { system: DIN, code: "125" }
+    image: /images/standards/iso_7089.png
+    renders:
+      - name: M8_PlainWasher
+        size: M8
+        # No length for washers; the workbench derives thickness from the standard.
+        pipeline:
+          export_3d: step
+          export_2d_views: [top]

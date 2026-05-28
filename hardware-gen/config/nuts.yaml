@@ -1,8 +1,25 @@
-fasteners:
+# Nuts. hardware_type "nut" is inferred from this filename.
 
-  - name: "M8_HexNut"
-    standard: "DIN934"    # will be auto-remapped to ISO4032 with a warning
-    size: "M8"
-    pipeline:
-      export_3d: "step"
-      export_2d_views: ["top"]
+standards:
+  - id: iso4032
+    primary_system: DIN
+    description: "Fasteners - Hexagon regular nuts (style 1)"
+    designations:
+      - { system: ISO, code: "4032" }
+      - { system: DIN, code: "934" }
+    image: /images/standards/iso_4032.png
+    renders:
+      - name: M8_HexNut
+        size: M8
+        pipeline:
+          export_3d: step
+          export_2d_views: [top]
+
+  # Catalog-only for now — no render recipe yet.
+  - id: iso10511
+    primary_system: DIN
+    description: "Fasteners - Prevailing torque hexagon nuts - Thin nuts (with non-metallic insert)"
+    designations:
+      - { system: ISO, code: "10511" }
+      - { system: DIN, code: "985" }
+    image: /images/standards/iso_10511.png

@@ -1,4 +1,7 @@
-fasteners:
-  # Standoffs, inserts, pins, clips, and anything else that doesn't belong
-  # in bolts_screws, nuts, or washers goes here.
-  []
+# Standoffs, inserts, pins, clips, and anything else that doesn't belong in
+# bolts_screws, nuts, or washers goes here.
+#
+# hardware_type is NOT inferred from this filename — entries here are
+# heterogeneous, so each standard must declare its own `hardware_type`.
+
+standards: []

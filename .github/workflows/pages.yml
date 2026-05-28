@@ -30,8 +30,8 @@ jobs:
           version: "latest"
 
       # Generated catalogs are NOT stored in git (single source of truth lives in
-      # hardware-gen/config/standards_meta.yaml and images/custom/*.svg). Build them
-      # here so the deployed site has them, without making them a PR merge surface.
+      # hardware-gen/config/*.yaml and images/custom/*.svg). Build them here so the
+      # deployed site has them, without making them a PR merge surface.
       - name: Install generator dependencies
         working-directory: hardware-gen
         run: uv sync

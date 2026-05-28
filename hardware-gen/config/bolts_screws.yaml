@@ -1,25 +1,60 @@
-fasteners:
+# Bolts & screws. hardware_type "screw" is inferred from this filename.
+#
+# Each standard carries its catalog metadata (description, designations, image)
+# and an optional `renders` list — the part instances the CAD pipeline builds.
+# The `id` uppercased is the FreeCAD Fasteners workbench standard name, so it
+# must match that name exactly (e.g. iso7380-1, not iso7380).
 
-  - name: "SocketCap"
-    standard: "ISO4762"   # DIN912 is the equivalent but ISO is preferred
-    size: "M4"
-    length: 20
-    pipeline:
-      export_3d: "step"
-      export_2d_views: ["iso", "top", "side"]
+standards:
+  - id: iso4762
+    primary_system: DIN
+    description: "Hexagon socket head cap screws"
+    designations:
+      - { system: ISO, code: "4762" }
+      - { system: DIN, code: "912" }
+    image: /images/standards/iso_4762.png
+    renders:
+      - name: SocketCap
+        size: M4
+        length: 20
+        pipeline:
+          export_3d: step
+          export_2d_views: [iso, top, side]
 
-  - name: "ButtonHead"
-    standard: "ISO7380-1"
-    size: "M4"
-    length: 10
-    pipeline:
-      export_3d: "step"
-      export_2d_views: ["iso", "top", "side"]
+  - id: iso7380-1
+    primary_system: DIN
+    description: "Fasteners - Button head screws with reduced loadability - Part 1: Hexagon socket button head screws (ISO 7380-1:2022); German version EN ISO 7380-1:2023"
+    designations:
+      - { system: ISO, code: "7380-1" }
+      - { system: DIN, code: "9427" }
+    image: /images/standards/iso_7380_1.png
+    renders:
+      - name: ButtonHead
+        size: M4
+        length: 10
+        pipeline:
+          export_3d: step
+          export_2d_views: [iso, top, side]
 
-  - name: "ButtonHeadFlange"
-    standard: "ISO7380-2"
-    size: "M4"
-    length: 10
-    pipeline:
-      export_3d: "step"
-      export_2d_views: ["iso", "top", "side"]
+  - id: iso7380-2
+    primary_system: ISO
+    description: "Fasteners - Button head screws with reduced loadability - Part 2: Hexagon socket button head screws with flange (ISO 7380-2:2022)"
+    designations:
+      - { system: ISO, code: "7380-2" }
+    image: /images/standards/iso_7380_2.png
+    renders:
+      - name: ButtonHeadFlange
+        size: M4
+        length: 10
+        pipeline:
+          export_3d: step
+          export_2d_views: [iso, top, side]
+
+  # Catalog-only for now — no render recipe yet.
+  - id: iso10642
+    primary_system: DIN
+    description: "Fasteners - Hexagon socket countersunk head screws with reduced loadability"
+    designations:
+      - { system: ISO, code: "10642" }
+      - { system: DIN, code: "7991" }
+    image: /images/standards/iso_10642.png
