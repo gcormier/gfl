@@ -77,9 +77,6 @@ jobs:
     name: Generate 3D + 2D artifacts
     runs-on: ubuntu-latest
     needs: dry-run
-    # Only run on push to main or manual dispatch to avoid burning CI minutes
-    # on every PR.  Remove this condition to run on every PR.
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     env:
