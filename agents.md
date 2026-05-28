@@ -61,6 +61,26 @@ To help navigate the frontend codebase quickly, here is the breakdown of the cor
 
 ## Hardware Standards Workflow
 
+### Design Goals
+
+Two principles drive the direction of this workflow. Weigh changes against them:
+
+1. **Standards as code (OpenSCAD).** Hardware geometry should be defined as plain,
+   version-controllable code. The long-term target is **OpenSCAD** — text-based
+   parametric CAD that is lighter than the FreeCAD AppImage and runnable inside a
+   CI/deploy step — replacing the current FreeCAD + Fasteners Workbench pipeline.
+2. **Single source of truth.** Each fact about a standard lives in exactly one place
+   (the source YAML / geometry code). Derived artifacts (`standards.json`,
+   `custom-icons.json`, rendered images) are *generated*, never authored.
+
+> **Generated artifacts and PRs:** committing a generated *text* file (like
+> `standards.json`) back to `main` makes it a merge surface — every concurrent PR
+> that regenerated it conflicts and must rebase + re-generate. The direction that
+> honors "single source of truth" is to **generate derivatives at deploy time** (in
+> `pages.yml`) rather than store them in git, so contributors only ever edit the
+> source. Heavy CAD-rendered binaries may remain committed artifacts (low conflict
+> risk, expensive to build) until the toolchain is light enough to render at deploy.
+
 `standards.json` (root) is **generated** — never edit it by hand.
 
 **Source of truth**: `hardware-gen/config/standards_meta.yaml`

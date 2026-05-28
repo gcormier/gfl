@@ -18,6 +18,17 @@ A browser-based label generator for [Gridfinity](https://www.youtube.com/watch?v
 - Favorites system with import/export
 - Batch printing with a queue
 
+## Design Goals
+
+The hardware-standards pipeline is built around two principles:
+
+1. **Standards as code (OpenSCAD).** Fastener geometry is defined as version-controlled
+   code rather than hand-drawn assets. The direction is **OpenSCAD** — lightweight,
+   text-based parametric CAD — so geometry can be reviewed in a PR like any other source.
+2. **Single source of truth.** Every fact about a standard lives in one place; the
+   `standards.json` catalog and rendered images are *generated* from that source, never
+   edited directly.
+
 ## Print Agent
 
 The **Print Agent** is a small local Python server that receives rendered label PNGs from the web app and sends them directly to the printer over USB — no P-touch Editor or Windows print spooler required.
