@@ -8,5 +8,11 @@ fasteners:
       export_3d: "step"
       export_2d_views: ["iso", "top", "side"]
 
-
+  - name: "M8x10_ButtonHead"
+    standard: "ISO73BAD80"
+    size: "M8"
+    length: 10
+    pipeline:
+      export_3d: "step"
+      export_2d_views: ["iso", "top", "side"]
 
