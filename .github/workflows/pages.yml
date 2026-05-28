@@ -25,6 +25,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      # Generated catalogs are NOT stored in git (single source of truth lives in
+      # hardware-gen/config/standards_meta.yaml and images/custom/*.svg). Build them
+      # here so the deployed site has them, without making them a PR merge surface.
+      - name: Install generator dependencies
+        working-directory: hardware-gen
+        run: uv sync
+
+      - name: Generate standards.json and custom-icons.json
+        working-directory: hardware-gen
+        run: |
+          uv run python generate_standards_json.py
+          uv run python generate_custom_icons.py
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

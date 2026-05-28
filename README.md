@@ -91,20 +91,20 @@ Contributions are welcome via **pull request**. Please do not push directly to `
 
 ### Adding Custom Icons
 
-Custom SVG icons live in the `images/custom/` folder and are registered in `custom-icons.json`. To add a new icon:
+Custom SVG icons live in the `images/custom/` folder. The SVG file **is** the source of
+truth — its name and search keywords are carried inside the SVG itself, and the
+`custom-icons.json` catalog is generated from it at deploy time (never edit or commit
+that file). To add a new icon:
 
-1. Create an SVG file with a `0 0 24 24` viewBox containing a single `<path>`. Save it to `images/custom/my-icon.svg`.
-2. Add an entry to `custom-icons.json`:
-   ```json
-   {
-     "id": "my-icon",
-     "name": "My Icon",
-     "file": "my-icon.svg"
-   }
-   ```
-3. Open a PR with your addition.
+1. Create an SVG file with a `0 0 24 24` viewBox containing a single `<path>`, plus a
+   `<title>` (display name) and `<desc>` (comma-separated search keywords). Save it to
+   `images/custom/my-icon.svg`. Or author one in the browser via `contribute.html`.
+2. Open a PR with **just the SVG**. On merge, the deploy regenerates `custom-icons.json`
+   and your icon goes live — no JSON edit needed.
 
-> **Tip:** You can test your icon locally by loading the app and selecting it from the Custom icon source before submitting the PR.
+> **Tip:** To preview locally, run `python hardware-gen/generate_custom_icons.py` from
+> the repo root to build a working-tree `custom-icons.json`, then load the app and select
+> your icon from the Custom icon source.
 
 #### SVG Icon Guidelines
 

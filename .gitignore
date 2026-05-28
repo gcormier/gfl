@@ -81,3 +81,8 @@ hardware-gen/build/
 hardware-gen/output/
 hardware-gen/.venv/
 hardware-gen/.uv-cache/
+
+# Generated catalogs — built at deploy time (pages.yml) from their sources
+# (standards_meta.yaml, images/custom/*.svg). Never edit or commit by hand.
+/standards.json
+/custom-icons.json

@@ -75,11 +75,15 @@ jobs:
       - name: Dry-run all configs
         run: uv run generate.py --dry-run --verbose
 
-      - name: Check standards.json is up to date
-        run: uv run python generate_standards_json.py --check
+      # standards.json / custom-icons.json are generated at deploy time (pages.yml),
+      # not stored in git — so there is no committed file to diff against. We still
+      # run the generators here as a validation gate: they parse the source YAML and
+      # validate every SVG's metadata, exiting non-zero on any malformed input.
+      - name: Validate standards source (standards_meta.yaml)
+        run: uv run python generate_standards_json.py
 
-      - name: Check custom-icons.json is up to date (validates SVG metadata)
-        run: uv run python generate_custom_icons.py --check
+      - name: Validate custom icon sources (SVG metadata)
+        run: uv run python generate_custom_icons.py
 
   # ── Full generation (requires FreeCAD) ────────────────────────────────────
   generate:
