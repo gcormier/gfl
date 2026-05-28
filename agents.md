@@ -95,3 +95,35 @@ The generator validates each SVG (non-empty `<title>`, at least one `<desc>`
 keyword, at least one `<path d>`, conforming filename) and fails CI otherwise.
 Same version-bump rule applies — `custom-icons.json` is a frontend JSON file.
 
+---
+
+## CI/CD Pipelines (GitHub Actions)
+
+Two workflows live in `.github/workflows/`. Both carry real deployment logic — read this before editing either, since changes can publish to GitHub Pages or push commits back to `main`.
+
+### `pages.yml` — Deploy to GitHub Pages
+
+Publishes the static site (the entire repo root) to GitHub Pages.
+
+- **Triggers**: push to `main` (ignoring `print-agent/**`, which is never deployed) and manual `workflow_dispatch`.
+- **Concurrency**: group `pages`, `cancel-in-progress: true` — a newer push supersedes an in-flight deploy.
+- **Permissions**: `pages: write`, `id-token: write` (required by `deploy-pages`).
+- **Steps**: `checkout` → `configure-pages` → `upload-pages-artifact` (path `.`, the whole repo) → `deploy-pages`.
+- **Implication**: anything committed to `main` outside `print-agent/` ships to the live site. The generated `output/*.svg`, `standards.json`, and `custom-icons.json` are served from here.
+
+### `hardware-gen.yml` — Hardware artifact generation & validation
+
+Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardware artifacts, committing the resulting SVGs back to the repo so Pages can serve them.
+
+- **Triggers**: push **and** pull_request touching `hardware-gen/config/**`, `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs).
+- **Concurrency**: group `hardware-gen-${{ github.ref }}`, `cancel-in-progress: true` — one run per branch to avoid clobbering the artifact cache; other branches run independently.
+- **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`.
+
+1. **`lint`** (no FreeCAD): `uv sync --dev`, then `ruff check .` and `mypy generate.py pipeline/`. Working dir `hardware-gen`.
+2. **`dry-run`** (no FreeCAD): parses/validates YAML via `generate.py --dry-run`, then enforces sync with `generate_standards_json.py --check` and `generate_custom_icons.py --check`. **This is the gate that fails CI when a generated JSON is stale** — regenerate and commit before pushing.
+3. **`generate`** (requires FreeCAD, `contents: write`): downloads & extracts the FreeCAD 1.1.1 AppImage to `/opt/freecad` (cached by URL), installs the Fasteners workbench (cached weekly via a `%Y-%U` key), runs `generate.py` headless (`QT_QPA_PLATFORM=offscreen`, `FREECADCMD` pointed at the extracted binary). Uploads STEP and SVG artifacts (30-day retention), then **commits the regenerated `hardware-gen/output/*.svg` back to the repo** as `github-actions[bot]` with `[skip ci]` and pushes. That commit is what makes the geometry live on Pages.
+
+**Caching notes**: the FreeCAD AppImage cache key is the download URL — bump `FREECAD_APPIMAGE_URL` to upgrade FreeCAD and the cache invalidates automatically. The Fasteners workbench cache rotates weekly so upstream fixes get picked up without manual cache busting.
+
+**`[skip ci]` interaction**: the auto-commit uses `[skip ci]`, which GitHub treats as "skip **all** workflows for this commit" — so the bot's SVG push retriggers neither `hardware-gen.yml` (the intent — avoids an infinite loop) **nor** `pages.yml`. The regenerated SVGs therefore go live on the *next* deploy of `main` (the next non-`[skip ci]` push or a manual `pages.yml` dispatch), not on the bot commit itself.
+
