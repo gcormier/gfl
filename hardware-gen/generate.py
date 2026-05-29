@@ -142,7 +142,7 @@ def _run_pipeline(
     log.info("── %s [%s %s] ──", spec.name, spec.standard, spec.size)
 
     if dry_run:
-        log.info("  [dry-run] would generate: %s", spec.pipeline)
+        log.info("  [dry-run] would generate views: %s", spec.views)
         return True
 
     assert engine is not None
@@ -151,7 +151,7 @@ def _run_pipeline(
         model_path = engine.generate_3d(spec)
 
         # Stage 2 — only if views are requested
-        if spec.pipeline.export_2d_views:
+        if spec.views:
             svg_paths = engine.generate_2d(spec, model_path)
             for p in svg_paths:
                 log.info("  → %s", p)

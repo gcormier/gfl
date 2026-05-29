@@ -143,7 +143,7 @@ class FreeCADEngine(CADEngine):
             "size":      spec.size,
             "length":    spec.length,
             "out_path":  str(out_path),
-            "format":    spec.pipeline.export_3d,
+            "format":    "step",
         }
         log.info("[Stage 1] Generating 3D: %s → %s", spec.name, out_path.name)
         self._run_freecad_script(_SCRIPTS_DIR / "stage1_3d.py", params)
@@ -164,7 +164,7 @@ class FreeCADEngine(CADEngine):
         Returns the list of SVG paths that were created.
         """
         created: list[Path] = []
-        for view in spec.pipeline.export_2d_views:
+        for view in spec.views:
             svg_path = self._2d_artifact_path(spec, view)
             params = {
                 "model_path": str(model_path),

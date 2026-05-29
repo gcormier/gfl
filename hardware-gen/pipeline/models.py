@@ -3,10 +3,10 @@ Typed data models for the YAML configuration schema.
 
 Each ``config/*.yaml`` file describes one class of hardware (``nuts.yaml``,
 ``bolts_screws.yaml``, ``washers.yaml``, ``misc.yaml``). A file holds a list of
-*standards*; each standard carries both its catalog metadata (description,
-designations, image) and an optional list of *render* recipes (the part
-instances the CAD pipeline builds). This is the single source of truth — both
-``generate.py`` (geometry) and ``generate_standards_json.py`` (catalog) read it.
+*standards*; each standard carries its catalog metadata (description,
+designations) and an optional list of *render* recipes (the part instances the
+CAD pipeline builds). This is the single source of truth — both ``generate.py``
+(geometry) and ``generate_standards_json.py`` (catalog) read it.
 """
 
 from __future__ import annotations
@@ -15,9 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-# ── Supported export types ────────────────────────────────────────────────────
+# ── Supported view types ──────────────────────────────────────────────────────
 
-Export3DFormat = Literal["step", "fcstd"]
 ViewName = Literal["top", "side", "front", "iso"]
 
 # ── hardware_type inferred from the config filename stem ───────────────────────
@@ -29,23 +28,6 @@ HARDWARE_TYPE_BY_FILE: dict[str, str] = {
     "washers": "washer",
     "bolts_screws": "screw",
 }
-
-
-# ── Per-render pipeline settings ──────────────────────────────────────────────
-
-@dataclass
-class PipelineConfig:
-    """Controls what the pipeline emits for a single render."""
-
-    export_3d: Export3DFormat = "step"
-    export_2d_views: list[ViewName] = field(default_factory=lambda: ["top"])
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PipelineConfig:
-        return cls(
-            export_3d=data.get("export_3d", "step"),
-            export_2d_views=data.get("export_2d_views", ["top"]),
-        )
 
 
 # ── Cross-reference designation (system + code) ───────────────────────────────
@@ -71,15 +53,17 @@ class RenderSpec:
     name: str
     size: str           # e.g. "M8"
     length: int | None  # mm; None for items like washers that have no length
-    pipeline: PipelineConfig
+    views: list[ViewName]
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> RenderSpec:
+    def from_dict(cls, data: dict[str, Any], default_name: str) -> RenderSpec:
+        # ``name`` is the output filename stem; it defaults to the parent
+        # standard's id and only needs setting to disambiguate multiple renders.
         return cls(
-            name=data["name"],
+            name=data.get("name") or default_name,
             size=data["size"],
             length=data.get("length"),
-            pipeline=PipelineConfig.from_dict(data.get("pipeline", {})),
+            views=data.get("views", ["top"]),
         )
 
 
@@ -95,7 +79,6 @@ class StandardSpec:
     """
 
     id: str
-    primary_system: str
     description: str
     hardware_type: str
     designations: list[Designation]
@@ -113,12 +96,11 @@ class StandardSpec:
             )
         return cls(
             id=std_id,
-            primary_system=data["primary_system"],
             description=data["description"],
             hardware_type=hardware_type,
             designations=[Designation.from_dict(d) for d in data["designations"]],
             image=data.get("image"),
-            renders=[RenderSpec.from_dict(r) for r in data.get("renders", [])],
+            renders=[RenderSpec.from_dict(r, std_id) for r in data.get("renders", [])],
         )
 
 
@@ -132,7 +114,7 @@ class FastenerSpec:
     standard: str       # canonical standard id; resolved to a FreeCAD name
     size: str
     length: int | None
-    pipeline: PipelineConfig
+    views: list[ViewName]
 
 
 # ── Top-level config file ──────────────────────────────────────────────────────
@@ -164,7 +146,7 @@ class HardwareConfig:
                         standard=std.id,
                         size=render.size,
                         length=render.length,
-                        pipeline=render.pipeline,
+                        views=render.views,
                     )
                 )
         return specs

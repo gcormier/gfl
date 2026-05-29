@@ -94,21 +94,25 @@ def _render(collected: list[tuple[StandardSpec, Path]]) -> str:
     for std, _ in collected:
         entry: dict[str, Any] = {
             "id": std.id,
-            "primarySystem": std.primary_system,
             "description": std.description,
             "designations": [
                 {"system": d.system, "code": d.code} for d in std.designations
             ],
             "hardwareType": std.hardware_type,
         }
-        if std.image is not None:
-            entry["image"] = std.image
-        if std.renders:
-            render = std.renders[0]
+        render = std.renders[0] if std.renders else None
+        if render:
             entry["renderViews"] = {
                 view: f"/hardware-gen/output/{render.name}_{view}.svg"
-                for view in render.pipeline.export_2d_views
+                for view in render.views
             }
+        # image defaults to the first render's first view; an explicit `image`
+        # on the standard overrides it (e.g. a custom catalog-only thumbnail).
+        image = std.image
+        if image is None and render and render.views:
+            image = f"/hardware-gen/output/{render.name}_{render.views[0]}.svg"
+        if image is not None:
+            entry["image"] = image
         output.append(entry)
 
     views_count = sum(len(e.get("renderViews", {})) for e in output)

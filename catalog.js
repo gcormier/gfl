@@ -465,9 +465,9 @@ function clearCustomIcon() {
 function buildDesignationText(standard, preference) {
   const designations = standard.designations;
   if (preference === 'auto') {
-    // Show only the primary system's designation
-    const primary = designations.filter(d => d.system === standard.primarySystem);
-    const use = primary.length ? primary : designations;
+    // Prefer ISO when present, otherwise fall back to whatever exists.
+    const iso = designations.filter(d => d.system === 'ISO');
+    const use = iso.length ? iso : designations;
     return use.map(d => `${d.system} ${d.code}`).join(' / ');
   }
   // ISO or DIN: show only designations matching the chosen system

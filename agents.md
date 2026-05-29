@@ -97,33 +97,38 @@ metadata and its geometry recipe, so the two can't drift apart:
 # nuts.yaml  → hardware_type "nut" inferred from the filename
 standards:
   - id: iso4032                 # uppercased, this IS the FreeCAD standard name
-    primary_system: DIN
     description: "Fasteners - Hexagon regular nuts (style 1)"
     designations:
       - { system: ISO, code: "4032" }
       - { system: DIN, code: "934" }
-    image: /hardware-gen/output/M8_HexNut_top.svg
     renders:                    # optional — omit/empty for catalog-only standards
-      - name: M8_HexNut
-        size: M8                # length too, for items that have one
-        pipeline: { export_3d: step, export_2d_views: [top] }
+      - size: M8                # length too, for items that have one
+        views: [top]
 ```
 
 Key rules:
-- **`id` ⇒ FreeCAD name.** Geometry is built from `id.upper()` (via `resolve_standard`),
-  so the id must equal the FreeCAD Fasteners workbench name — e.g. `iso7380-1`, **not**
-  `iso7380`. Renders inherit the standard from their parent `id`; they do **not** repeat it.
+- **`id` ⇒ FreeCAD name *and* render filename.** Geometry is built from `id.upper()`
+  (via `resolve_standard`), so the id must equal the FreeCAD Fasteners workbench name —
+  e.g. `iso7380-1`, **not** `iso7380`. Renders inherit the standard from their parent
+  `id`; they do **not** repeat it. A render's output filename stem also **defaults to the
+  `id`** (e.g. `iso4032_top.svg`); set an optional `name:` on a render only to disambiguate
+  when a standard has more than one render.
+- **`image` is inferred**, not authored — it's the first render's first view
+  (`/hardware-gen/output/<name>_<firstview>.svg`). Set an explicit `image:` on a standard
+  only as an override (e.g. a custom catalog-only thumbnail).
 - **`hardware_type` is inferred from the filename** (`nuts`→nut, `washers`→washer,
   `bolts_screws`→screw) via `HARDWARE_TYPE_BY_FILE` in `pipeline/models.py`. `misc.yaml`
   has no inferred type, so its entries must set `hardware_type` explicitly. Any entry may
   override the inferred value with an explicit `hardware_type`.
+- **Auto designation display is ISO-first.** The catalog picks the ISO designation when one
+  exists, else falls back to whatever is present — there is no `primary_system` field.
 - **`renders` is optional.** A standard with no render recipe is catalog-only (shows in
-  the list, builds no geometry).
+  the list, builds no geometry). A render is just `size` + `views` (+ `length` where it
+  applies); the 3D intermediate is always STEP.
 
 To add or modify a standard:
-1. Edit the matching `hardware-gen/config/*.yaml`. Point each render's `image` at the SVG
-   the pipeline will produce (e.g. `/hardware-gen/output/M8_HexNut_top.svg`) — you do
-   **not** render it by hand.
+1. Edit the matching `hardware-gen/config/*.yaml`. The render `image` is derived from the
+   `id` — you do **not** author it or render the SVG by hand.
 2. Commit **only** the YAML — open a PR. Do **not** generate or commit `standards.json`
    or the SVGs.
 3. On merge to `main`, `hardware-gen.yml` renders the geometry and commits the

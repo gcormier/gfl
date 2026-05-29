@@ -49,7 +49,7 @@ class CADEngine(abc.ABC):
     @abc.abstractmethod
     def generate_2d(self, spec: FastenerSpec, model_path: Path) -> list[Path]:
         """
-        Project *model_path* into the 2D views requested in *spec.pipeline*.
+        Project *model_path* into the 2D views requested in *spec.views*.
 
         Returns the list of generated SVG file paths written into
         ``self.output_dir``.
@@ -58,9 +58,8 @@ class CADEngine(abc.ABC):
     # ── Shared helpers ────────────────────────────────────────────────────────
 
     def _3d_artifact_path(self, spec: FastenerSpec) -> Path:
-        """Canonical build-dir path for the 3D artifact of *spec*."""
-        ext = spec.pipeline.export_3d
-        return self.build_dir / f"{spec.name}.{ext}"
+        """Canonical build-dir path for the 3D artifact of *spec* (always STEP)."""
+        return self.build_dir / f"{spec.name}.step"
 
     def _2d_artifact_path(self, spec: FastenerSpec, view: str) -> Path:
         """Canonical output-dir path for a single 2D view."""

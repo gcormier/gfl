@@ -2,22 +2,16 @@
 
 standards:
   - id: iso4032
-    primary_system: DIN
     description: "Fasteners - Hexagon regular nuts (style 1)"
     designations:
       - { system: ISO, code: "4032" }
       - { system: DIN, code: "934" }
-    image: /hardware-gen/output/M8_HexNut_top.svg
     renders:
-      - name: M8_HexNut
-        size: M8
-        pipeline:
-          export_3d: step
-          export_2d_views: [top]
+      - size: M8
+        views: [top]
 
   # Catalog-only for now — no render recipe yet.
   - id: iso10511
-    primary_system: DIN
     description: "Fasteners - Prevailing torque hexagon nuts - Thin nuts (with non-metallic insert)"
     designations:
       - { system: ISO, code: "10511" }
