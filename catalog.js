@@ -1,6 +1,10 @@
 
 let libMeta = null;
 
+// Hardware types that have a user-entered length dimension.
+// Allowlist: unknown/new types default to no-length (safer).
+const TYPES_WITH_LENGTH = new Set(['screw']);
+
 async function loadStandards() {
   try {
     const res = await fetch(assetUrl('standards.json'));
@@ -199,6 +203,14 @@ function selectStandard(s) {
   initStandardViews(s);
   renderViewChips();
 
+  const hasLength = TYPES_WITH_LENGTH.has(s.hardwareType);
+  const lengthGroup = document.getElementById('lengthGroup');
+  if (!hasLength && !lengthGroup.hidden) {
+    document.getElementById('lengthInput').value = '';
+    onLengthInput();
+  }
+  lengthGroup.hidden = !hasLength;
+
   updateStarButtons();
 
   scheduleRender();
@@ -211,6 +223,7 @@ function clearStandard() {
   document.getElementById('selectedStandard').hidden = true;
   document.getElementById('standardPrefGroup').hidden = true;
   document.getElementById('standardViewGroup').hidden = true;
+  document.getElementById('lengthGroup').hidden = false;
   renderStandardsList(document.getElementById('standardSearch').value);
   updateStarButtons();
   scheduleRender();
