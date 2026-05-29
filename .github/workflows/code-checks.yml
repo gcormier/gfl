@@ -1,37 +1,48 @@
 name: code-checks
 
-# Verification for *code* PRs (frontend + print agent). Deliberately scoped to
-# stay out of hardware-gen.yml's lane: it does NOT trigger on hardware-gen/**,
-# images/custom/**, or the generated catalogs — those are validated by
-# hardware-gen.yml. A frontend PR runs only this; a hardware PR runs only that.
+# Verification for *code* PRs (frontend + print agent). This workflow triggers
+# on EVERY pull request (and every push to main) — not just code paths — so that
+# its required status check ("code-checks gate") is always reported. A required
+# check that is never reported stays "Expected" forever and blocks the PR; that
+# is exactly what path-filtered triggers cause for an unrelated (e.g. hardware)
+# PR. Instead we trigger always, detect relevance in the `changes` job, and skip
+# the heavy jobs when no code paths changed. Skipped jobs count as passing, so a
+# hardware-only PR sails through this gate while a code PR must actually pass it.
+# Heavy work still only runs when relevant, keeping hardware-gen.yml's lane clear.
 on:
-  # push is scoped to main so feature-branch pushes don't double-run alongside
-  # the PR's pull_request event. The PR is the gate; the main run is a cheap
-  # post-merge backstop.
   push:
     branches: [main]
-    paths:
-      - "*.js"
-      - "*.html"
-      - "*.css"
-      - "print-agent/**"
-      - ".github/workflows/code-checks.yml"
   pull_request:
-    paths:
-      - "*.js"
-      - "*.html"
-      - "*.css"
-      - "print-agent/**"
-      - ".github/workflows/code-checks.yml"
 
 concurrency:
   group: code-checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ── Relevance detection (near-instant; the only job that always does work) ──
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - "*.js"
+              - "*.html"
+              - "*.css"
+              - "print-agent/**"
+              - ".github/workflows/code-checks.yml"
+
   # ── Frontend JS syntax check (no build step in this repo) ──────────────────
   js:
     name: JS syntax check
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +66,8 @@ jobs:
   # the web VERSION are generated, not authored — see agents.md).
   print-agent:
     name: Print agent lint
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,6 +90,8 @@ jobs:
   # surface and a stale-data risk — fail fast.
   no-generated-artifacts:
     name: No generated artifacts
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,3 +106,28 @@ jobs:
             exit 1
           fi
           echo "OK — no generated files tracked."
+
+  # ── Required status check (always reports; mark THIS in branch protection) ──
+  # Runs even when the jobs above are skipped (if: always()), and fails only if a
+  # job it depends on actually failed or was cancelled — "skipped" and "success"
+  # both pass. This is the single stable context branch protection requires for
+  # code; it turns "the relevant jobs passed (or didn't need to run)" into one
+  # green check, so a hardware-only PR isn't blocked waiting on code checks.
+  gate:
+    name: code-checks gate
+    if: always()
+    needs: [changes, js, print-agent, no-generated-artifacts]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify no required job failed
+        run: |
+          results="${{ join(needs.*.result, ' ') }}"
+          echo "Job results: $results"
+          for r in $results; do
+            case "$r" in
+              failure|cancelled)
+                echo "::error::A required code check did not pass."
+                exit 1 ;;
+            esac
+          done
+          echo "OK — code checks passed or were not applicable to this PR."

@@ -204,24 +204,52 @@ runs in the `hardware-gen.yml` dry-run job purely as that validation gate.
 
 ## CI/CD Pipelines (GitHub Actions)
 
-Three workflows live in `.github/workflows/`. They are **scoped by path so each PR runs
-only what's relevant** — a hardware/icon PR runs `hardware-gen.yml`, a frontend/print-agent
-PR runs `code-checks.yml`, and neither overlaps the other. `pages.yml` and `hardware-gen.yml`
-carry real deployment logic (publish to Pages / push commits back to `main`) — read this
-before editing either.
+Three workflows live in `.github/workflows/`. `hardware-gen.yml` and `code-checks.yml`
+each **only do work relevant to the PR** — a hardware/icon PR runs the hardware jobs, a
+frontend/print-agent PR runs the code jobs, and the heavy jobs of the irrelevant workflow
+are **skipped**. `pages.yml` and `hardware-gen.yml` carry real deployment logic (publish to
+Pages / push commits back to `main`) — read this before editing either.
 
-**PR-verify vs merge-publish.** `hardware-gen.yml` and `code-checks.yml` trigger on
-`pull_request` (any branch) **and** `push` scoped to **`main` only**. The `main`-only push
-scope is deliberate: a feature-branch push would otherwise double-run alongside the PR's
-`pull_request` event (same path filters, different `github.ref`, so concurrency doesn't
-cancel them). With push scoped to `main`, PRs are covered by `pull_request` and the
-merge-to-`main` push (which has no associated PR) is the single place the publish path runs.
+**Trigger on everything, skip what's irrelevant (required-check correctness).** Both
+verification workflows trigger on **every** `pull_request` and every push to **`main`** —
+they are *not* path-filtered at the `on:` level. This is deliberate and is what makes
+**branch protection** work: a required status check that never runs stays `Expected` forever
+and blocks the PR. Path-filtered triggers would mean a hardware PR never reports the code
+checks (and vice-versa), wedging the merge. Instead each workflow starts a tiny `changes`
+job (`dorny/paths-filter`) that detects relevant paths; the heavy jobs carry
+`if: needs.changes.outputs.<x> == 'true'` and **skip** when nothing relevant changed. A
+skipped job counts as **passing** for required checks, so the irrelevant workflow clears
+instantly while the relevant one must genuinely pass. The expensive work (FreeCAD render,
+etc.) still only runs when relevant — only the ~2-second `changes`/`gate` jobs run extra.
 
-| Workflow | Triggers on (paths) | Purpose |
-|---|---|---|
-| `hardware-gen.yml` | `pull_request` + push-to-`main`, paths: `hardware-gen/{config,freecad_scripts,pipeline}/**`, `generate_custom_icons.py`, `images/custom/**`, `custom-icons.json` | Lint/validate + FreeCAD render of hardware artifacts (commit/deploy on `main` only) |
-| `code-checks.yml` | `pull_request` + push-to-`main`, paths: `*.js`, `*.html`, `*.css`, `print-agent/**` | Verify frontend + print-agent PRs |
-| `pages.yml` | push to `main` (deploy only; PRs don't run it) | Build catalogs + version, deploy to Pages |
+**One required check per workflow — the `gate` job.** Each workflow ends with a `gate` job
+(`if: always()`, `needs:` all the real jobs) that fails only if a dependency *failed or was
+cancelled* (skipped/success both pass). Its check name — **`code-checks gate`** and
+**`hardware-gen gate`** — is the single stable context to require in branch protection.
+**Require exactly those two** (not the individual `js`/`lint`/etc. names): they always
+report, collapse the sub-jobs into one green check, and survive adding/removing sub-jobs
+without touching branch-protection config. Set via the API (the Settings UI search only
+lists previously-seen checks):
+
+```bash
+gh api repos/gcormier/gfl/branches/main/protection --method PUT --input - <<'EOF'
+{ "required_status_checks": { "strict": true,
+    "contexts": ["code-checks gate", "hardware-gen gate"] },
+  "enforce_admins": false, "required_pull_request_reviews": null, "restrictions": null }
+EOF
+```
+
+**PR-verify vs merge-publish.** The `main`-scoped push trigger (alongside `pull_request`) is
+the single place the publish path runs: a PR is covered by its `pull_request` event, and the
+merge-to-`main` push (which has no associated PR) is where `hardware-gen.yml` commits SVGs +
+dispatches Pages. (A code-only push to `main` now also starts `hardware-gen.yml`, but its
+`changes` job reports `hw=false`, so `generate` — and thus the publish step — is skipped.)
+
+| Workflow | Triggers | Required check | Purpose |
+|---|---|---|---|
+| `hardware-gen.yml` | every `pull_request` + push-to-`main` (no path filter; `changes` job gates the work) | **`hardware-gen gate`** | Lint/validate + FreeCAD render of hardware artifacts (commit/deploy on `main` only) |
+| `code-checks.yml` | every `pull_request` + push-to-`main` (no path filter; `changes` job gates the work) | **`code-checks gate`** | Verify frontend + print-agent PRs |
+| `pages.yml` | push to `main` (deploy only; PRs don't run it) | — | Build catalogs + version, deploy to Pages |
 
 ### `pages.yml` — Deploy to GitHub Pages
 
@@ -237,14 +265,17 @@ Publishes the static site (the entire repo root) to GitHub Pages.
 ### `code-checks.yml` — Frontend & print-agent PR verification
 
 Lightweight, fast checks for code PRs. **Carries no deploy logic and pushes nothing** —
-purely a gate. Scoped to code paths and deliberately excludes `hardware-gen/**` so it
-never double-runs against `hardware-gen.yml`.
+purely a gate. The heavy jobs only run when code paths changed; on a hardware-only PR they
+skip and the `gate` still reports green, so it never gets in `hardware-gen.yml`'s way.
 
-- **Triggers**: `pull_request` (any branch) **and** push to **`main`** touching `*.js`,
-  `*.html`, `*.css`, `print-agent/**`, or the workflow file. Push is `main`-scoped so a
-  feature-branch push doesn't double-run alongside the PR; the `main` run is a post-merge backstop.
+- **Triggers**: every `pull_request` (any branch) **and** push to **`main`** — no `on:`-level
+  path filter (so the required `code-checks gate` is always reported). Relevance is decided by
+  the `changes` job; the real jobs `if:`-skip when no `*.js`/`*.html`/`*.css`/`print-agent/**`/
+  workflow-file changes are present. Push is `main`-scoped as a post-merge backstop.
 - **Concurrency**: group `code-checks-${{ github.ref }}`, `cancel-in-progress: true`.
-- **Jobs** (parallel, no FreeCAD, no heavy deps):
+- **`changes`**: `dorny/paths-filter` → `code` output; gates every job below. The `gate` job
+  (`if: always()`) is the required check and passes when the others passed or skipped.
+- **Jobs** (parallel, no FreeCAD, no heavy deps; skipped unless `changes.code == 'true'`):
   1. **`js`** — `node --check` on every root `*.js`. Parses (doesn't execute) each module,
      catching syntax errors — including the web worker — before they ship. No build step,
      no lint config; the repo is intentionally build-free.
@@ -261,9 +292,17 @@ never double-runs against `hardware-gen.yml`.
 
 Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardware artifacts, committing the resulting SVGs back to the repo so Pages can serve them.
 
-- **Triggers**: `pull_request` (any branch) **and** push to **`main`** touching `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`, `hardware-gen/pipeline/**` (render/crop logic), `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs). Push is `main`-scoped so a feature-branch push doesn't double-run alongside the PR.
+- **Triggers**: every `pull_request` (any branch) **and** push to **`main`** — no `on:`-level
+  path filter (so the required `hardware-gen gate` is always reported); plus `workflow_dispatch`
+  with an optional `config_file` input (empty = process all configs). The `changes` job decides
+  relevance from `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`,
+  `hardware-gen/pipeline/**`, `hardware-gen/generate_custom_icons.py`, `images/custom/**`,
+  `custom-icons.json`, or the workflow file; the heavy jobs `if:`-skip otherwise. Push is
+  `main`-scoped as a post-merge backstop.
 - **Concurrency**: group `hardware-gen-${{ github.ref }}`, `cancel-in-progress: true` — one run per branch to avoid clobbering the artifact cache; other branches run independently.
-- **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`. **All three run on PRs too** — the `generate` render verifies the geometry actually builds (a valid-name-but-fails-to-build render fails the PR), made cheap by the warm FreeCAD/Fasteners caches (~30s). Only the **commit-back + Pages dispatch** inside `generate` is gated to non-PR events (push-to-`main`/`workflow_dispatch`), so PRs render-to-verify but never commit or deploy.
+- **`changes`**: `dorny/paths-filter` → `hw` output; gates the chain below. The `gate` job
+  (`if: always()`, `needs:` lint/dry-run/generate) is the required check.
+- **Jobs run sequentially (`needs`)**: `changes` → `lint` → `dry-run` → `generate`. **All three run on relevant PRs too** — the `generate` render verifies the geometry actually builds (a valid-name-but-fails-to-build render fails the PR), made cheap by the warm FreeCAD/Fasteners caches (~30s). On a non-hardware PR they skip entirely. Only the **commit-back + Pages dispatch** inside `generate` is gated to non-PR events (push-to-`main`/`workflow_dispatch`), so PRs render-to-verify but never commit or deploy.
 
 1. **`lint`** (no FreeCAD): `uv sync --dev`, then `ruff check .` and `mypy generate.py pipeline/`. Working dir `hardware-gen`.
 2. **`dry-run`** (no FreeCAD): parses/validates YAML via `generate.py --dry-run`, then runs `generate_standards_json.py` and `generate_custom_icons.py` (no `--check`) as a **validation gate** — they parse the source YAML and validate every SVG's metadata, failing CI on malformed input. `--dry-run` also **validates every render's `id` against the committed `pipeline/fastener_types.json` snapshot** (the workbench registry), so a non-existent standard name (e.g. `iso7980`) fails *here*, with no FreeCAD, rather than as an opaque enumeration error mid-render. They no longer diff against a committed JSON for the catalogs (there isn't one — it's generated at deploy time).
