@@ -16,10 +16,7 @@ standards:
     description: "Spring lock washers, bent type (saddle lock washers)"
     designations:
       - { system: DIN, code: "128A" }
-    renders:
-        - size: M4
-          views: [iso, top]
-          
+
   # Catalog-only — conical disc spring (Belleville washer); DIN 2093 is the
   # primary dimensional standard; ISO 16983/16984 cover delivery and quality.
   - id: din2093
@@ -27,6 +24,3 @@ standards:
     designations:
       - { system: DIN, code: "2093" }
       - { system: ISO, code: "16983" }
-    renders:
-        - size: M4
-          views: [iso, top]
