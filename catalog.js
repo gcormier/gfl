@@ -72,7 +72,7 @@ function updateHighlight(items) {
 
 const VIEW_LABELS = { iso: 'ISO', top: 'Top', side: 'Side', front: 'Front' };
 
-function initViewChips(standard) {
+function initStandardViews(standard) {
   if (!standard) { viewChipOrder = []; selectedViews = []; return; }
   const views = standard.renderViews ? Object.keys(standard.renderViews) : [];
   viewChipOrder = [...views];
@@ -192,7 +192,7 @@ function selectStandard(s) {
   const systems = new Set(s.designations.map(d => d.system));
   prefGroup.hidden = !(systems.has('ISO') && systems.has('DIN'));
 
-  initViewChips(s);
+  initStandardViews(s);
   renderViewChips();
 
   updateStarButtons();
