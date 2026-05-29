@@ -33,6 +33,15 @@ async function init() {
   const el = document.getElementById('appVersion');
   if (el) el.textContent = `v${APP_VERSION}`;
   await loadStandards();
+  const libEl = document.getElementById('libVersion');
+  if (libEl && libMeta) {
+    const parts = [];
+    if (libMeta.generatedAt) parts.push('lib ' + libMeta.generatedAt.slice(0, 10));
+    if (libMeta.libCommit)   parts.push(libMeta.libCommit);
+    if (libMeta.standardsCount != null) parts.push(libMeta.standardsCount + ' std');
+    if (libMeta.viewsCount != null)     parts.push(libMeta.viewsCount + ' views');
+    libEl.textContent = parts.join(' · ');
+  }
   renderStandardsList('');
   bindEvents();
   initSegmentedControls();

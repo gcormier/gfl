@@ -36,8 +36,14 @@ jobs:
         working-directory: hardware-gen
         run: uv sync
 
+      - name: Compute stdlib git SHA
+        id: stdlib-sha
+        run: echo "sha=$(git log -1 --format=%h -- hardware-gen/ hardware-gen/output/)" >> $GITHUB_OUTPUT
+
       - name: Generate standards.json and custom-icons.json
         working-directory: hardware-gen
+        env:
+          GIT_STDLIB_SHA: ${{ steps.stdlib-sha.outputs.sha }}
         run: |
           uv run python generate_standards_json.py
           uv run python generate_custom_icons.py
