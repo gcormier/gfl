@@ -1,7 +1,7 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '1.9.8';
+const APP_VERSION = '1.9.9';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')
@@ -51,6 +51,17 @@ async function init() {
   renderFavoritesPanel();
   updateStarButtons();
   render();
+  fetchGhStars();
+}
+
+async function fetchGhStars() {
+  try {
+    const r = await fetch('https://api.github.com/repos/gcormier/gfl');
+    if (!r.ok) return;
+    const { stargazers_count: n } = await r.json();
+    const el = document.getElementById('ghStars');
+    if (el && n != null) el.textContent = ` ★${n.toLocaleString()}`;
+  } catch { /* non-critical */ }
 }
 
 // ─── Events ───────────────────────────────────────────────────────────────────
