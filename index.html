@@ -61,8 +61,8 @@
         <input type="radio" name="imageSource"  value="mdi" />
         <input type="radio" name="imageSource"  value="custom" />
         <input type="radio" name="imageSource"  value="none" />
-        <input type="radio" name="printPath"    value="agent"  checked />
-        <input type="radio" name="printPath"    value="serial" />
+        <input type="radio" name="printPath"    value="agent" />
+        <input type="radio" name="printPath"    value="serial" checked />
         <input type="radio" name="labelHeight"  value="12" checked />
         <input type="radio" name="labelHeight"  value="9" />
         <input type="radio" name="stdPref"      value="auto" checked />
@@ -383,13 +383,13 @@
       <!-- Output Card -->
       <div class="output-card">
         <div class="out-tabs" role="tablist">
-          <button class="out-tab out-tab-active" data-tab="agent"    role="tab" aria-selected="true">Print · USB Agent</button>
-          <button class="out-tab"                data-tab="serial"   role="tab" aria-selected="false">Print · Web Serial</button>
+          <button class="out-tab"                data-tab="agent"    role="tab" aria-selected="false">Print · USB Agent</button>
+          <button class="out-tab out-tab-active" data-tab="serial"   role="tab" aria-selected="true">Print · Web Serial</button>
           <button class="out-tab"                data-tab="download" role="tab" aria-selected="false">Download PNG</button>
         </div>
 
         <!-- Agent tab -->
-        <div class="out-body" id="outBodyAgent" role="tabpanel">
+        <div class="out-body" id="outBodyAgent" role="tabpanel" hidden>
           <div id="agentFirstRunHint" class="first-run-hint" hidden>
             Run <code>uv run agent.py</code> from the <code>print-agent/</code> folder on the machine connected to the printer.
           </div>
@@ -411,7 +411,7 @@
         </div>
 
         <!-- Serial tab -->
-        <div class="out-body" id="outBodySerial" role="tabpanel" hidden>
+        <div class="out-body" id="outBodySerial" role="tabpanel">
           <span class="out-hint">Pair PT-P710BT via Bluetooth, then connect. Requires Chrome/Edge.</span>
           <span class="out-spacer"></span>
           <button type="button" id="printSerialBtn" class="btn-primary">Connect &amp; Print</button>

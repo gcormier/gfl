@@ -6,7 +6,8 @@
 
 **Technical Stack:**
 - **Frontend**: Pure client-side JavaScript (no build step), hosted on GitHub Pages. Core modules handle rendering (`renderer.js`), JSCAD geometry evaluation in a Web Worker (`jscad-worker.js`), icon/standard catalog browsing (`catalog.js`), and the GitHub contribution flow (`github-contrib.js`).
-- **Print Agent**: A local Python HTTP server (`print-agent/agent.py`) running on `localhost:9100` via `uv run`. It receives base64 PNG label images from the browser and converts them to Brother raster protocol data for USB printing.
+- **Web Serial (primary print path)**: The browser sends raster data directly to the Brother PT-P710BT over Bluetooth via the Web Serial API (Chrome/Edge desktop). No drivers, no Zadig, no USB cable, no local agent required — just pair the printer via Bluetooth and click Connect & Print.
+- **Print Agent (USB fallback)**: A local Python HTTP server (`print-agent/agent.py`) running on `localhost:9100` via `uv run`. It receives base64 PNG label images from the browser and converts them to Brother raster protocol data for USB printing. Use this only when Bluetooth is unavailable.
 - **Standards**: The `standards.json` catalog defines the available hardware label standards and is rendered in the app from each standard's generated SVG `image` (produced by the FreeCAD pipeline into `hardware-gen/output/`). `standards.json` is a **generated file** — source of truth is the per-hardware-type configs in `hardware-gen/config/` (`bolts_screws.yaml`, `nuts.yaml`, `washers.yaml`, `misc.yaml`; geometry from the FreeCAD pipeline). Standards are no longer user-contributable in the browser.
 - **Custom images**: Community-contributed icons live in `images/custom/*.svg` and surface under **Icon → Custom**. The `custom-icons.json` manifest is a **generated file** — source of truth is the SVGs themselves (name/keywords carried in each SVG's `<title>`/`<desc>`). Authored and submitted via `contribute.html`.
 
@@ -52,8 +53,9 @@ Whenever you (an AI agent) modify files in this repository, you **MUST** adhere 
 
 ## Architecture Overview
 
-* **Frontend (Web Site)**: A static browser-based application (Gridfinity Label Generator) that generates and previews custom labels using an HTML `<canvas>`. 
-* **Backend (Print Agent)**: A local Python-based HTTP server bridging the web app and a Brother PT-P710BT label printer over USB. It runs via `uv run agent.py` on `localhost:9100` and converts base64 PNGs into Brother raster protocol data.
+* **Frontend (Web Site)**: A static browser-based application (Gridfinity Label Generator) that generates and previews custom labels using an HTML `<canvas>`.
+* **Web Serial (primary print path)**: The browser communicates directly with the Brother PT-P710BT label printer over Bluetooth via the Web Serial API. No drivers, no Zadig, no USB cable, and no local agent needed — pair via Bluetooth and print. Requires Chrome or Edge on desktop.
+* **Print Agent (USB fallback)**: A local Python-based HTTP server bridging the web app and the printer over USB. It runs via `uv run agent.py` on `localhost:9100` and converts base64 PNGs into Brother raster protocol data. Use when Bluetooth/Web Serial is unavailable.
 
 ## JavaScript File Breakdown
 
