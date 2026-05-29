@@ -217,10 +217,12 @@ they are *not* path-filtered at the `on:` level. This is deliberate and is what 
 and blocks the PR. Path-filtered triggers would mean a hardware PR never reports the code
 checks (and vice-versa), wedging the merge. Instead each workflow starts a tiny `changes`
 job (`dorny/paths-filter`) that detects relevant paths; the heavy jobs carry
-`if: needs.changes.outputs.<x> == 'true'` and **skip** when nothing relevant changed. A
-skipped job counts as **passing** for required checks, so the irrelevant workflow clears
-instantly while the relevant one must genuinely pass. The expensive work (FreeCAD render,
-etc.) still only runs when relevant — only the ~2-second `changes`/`gate` jobs run extra.
+`if: needs.changes.outputs.<x> == 'true'` and **skip** when nothing relevant changed. We
+require only the always-running `gate` job (below) — never the individual jobs — so branch
+protection never waits on a check that didn't run; the gate treats a skipped dependency as
+OK. The irrelevant workflow therefore clears instantly while the relevant one must genuinely
+pass. The expensive work (FreeCAD render, etc.) still only runs when relevant — only the
+~2-second `changes`/`gate` jobs run extra.
 
 **One required check per workflow — the `gate` job.** Each workflow ends with a `gate` job
 (`if: always()`, `needs:` all the real jobs) that fails only if a dependency *failed or was
@@ -228,8 +230,15 @@ cancelled* (skipped/success both pass). Its check name — **`code-checks gate`*
 **`hardware-gen gate`** — is the single stable context to require in branch protection.
 **Require exactly those two** (not the individual `js`/`lint`/etc. names): they always
 report, collapse the sub-jobs into one green check, and survive adding/removing sub-jobs
-without touching branch-protection config. Set via the API (the Settings UI search only
-lists previously-seen checks):
+without touching branch-protection config.
+
+> **Adding a verification job?** Gate it on `changes` (`needs: changes` +
+> `if: needs.changes.outputs.<x> == 'true'`) **and add it to that workflow's `gate`
+> `needs:` list.** A job that isn't in the gate's `needs:` is invisible to branch
+> protection — effectively optional, even if it fails. This is the one wiring step that's
+> easy to forget and silently weakens the gate.
+
+Set required checks via the API (the Settings UI search only lists previously-seen checks):
 
 ```bash
 gh api repos/gcormier/gfl/branches/main/protection --method PUT --input - <<'EOF'
