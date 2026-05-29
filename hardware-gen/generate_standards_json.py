@@ -17,7 +17,9 @@ as the CI validation gate.
 from __future__ import annotations
 
 import json
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -108,7 +110,18 @@ def _render(collected: list[tuple[StandardSpec, Path]]) -> str:
                 for view in render.pipeline.export_2d_views
             }
         output.append(entry)
-    return json.dumps(output, indent=2, ensure_ascii=False) + "\n"
+
+    views_count = sum(len(e.get("renderViews", {})) for e in output)
+    meta: dict[str, Any] = {
+        "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "standardsCount": len(output),
+        "viewsCount": views_count,
+    }
+    lib_commit = os.environ.get("GIT_STDLIB_SHA")
+    if lib_commit:
+        meta["libCommit"] = lib_commit
+
+    return json.dumps({"meta": meta, "standards": output}, indent=2, ensure_ascii=False) + "\n"
 
 
 def main() -> None:

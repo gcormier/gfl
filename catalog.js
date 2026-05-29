@@ -1,8 +1,12 @@
 
+let libMeta = null;
+
 async function loadStandards() {
   try {
     const res = await fetch(assetUrl('standards.json'));
-    standards = await res.json();
+    const data = await res.json();
+    standards = Array.isArray(data) ? data : (data.standards ?? []);
+    libMeta = Array.isArray(data) ? null : (data.meta ?? null);
   } catch (e) {
     console.error('Failed to load standards:', e);
   }
