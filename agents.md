@@ -116,6 +116,12 @@ Key rules:
 - **`image` is inferred**, not authored — it's the first render's first view
   (`/hardware-gen/output/<name>_<firstview>.svg`). Set an explicit `image:` on a standard
   only as an override (e.g. a custom catalog-only thumbnail).
+- **The first view in `views:` controls the catalog thumbnail.** The order of views in the
+  list determines which view shows up in the web app's standards list — the first entry is
+  the catalog image. This is intentional: put `iso` first for a 3D-looking thumbnail, or
+  `top` first for a flat technical view, depending on what best represents the part at a
+  glance. Example: `views: [iso, top]` renders both but uses the isometric as the catalog
+  image; swapping to `views: [top, iso]` makes the top view the thumbnail instead.
 - **`hardware_type` is inferred from the filename** (`nuts`→nut, `washers`→washer,
   `bolts_screws`→screw) via `HARDWARE_TYPE_BY_FILE` in `pipeline/models.py`. `misc.yaml`
   has no inferred type, so its entries must set `hardware_type` explicitly. Any entry may
