@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# version: 0.4.10
+# version: 0.4.11
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -440,7 +440,7 @@ def main():
     status = get_status(_backend)
     printer_info = f"found: {status['printer']} ✓" if status["ready"] else "not detected"
 
-    print(f"GFL print agent v0.4.4 — http://{args.host}:{args.port}")
+    print(f"GFL print agent v0.4.11 — http://{args.host}:{args.port}")
     print(f"Backend:  {_backend}")
     print(f"Printer:  {printer_info}")
     if status.get("warning"):

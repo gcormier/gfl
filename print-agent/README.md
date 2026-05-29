@@ -57,7 +57,7 @@ The agent starts an HTTP server on `http://localhost:9100` and waits for print j
 Startup output confirms the printer was detected:
 
 ```
-GFL print agent v0.4.4 — http://127.0.0.1:9100
+GFL print agent v0.4.11 — http://127.0.0.1:9100
 Backend:  usb
 Printer:  found: PT-P710BT ✓
 Waiting for print jobs... (Ctrl-C to stop)
