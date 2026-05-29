@@ -76,9 +76,12 @@ Thumbs.db
 # Local debug
 localdebug/
 
-# hardware-gen pipeline artifacts (generated; not source-controlled)
+# hardware-gen pipeline artifacts (generated)
+# build/ (STEP solids) is not source-controlled, but output/*.svg IS committed
+# so GitHub Pages can serve the rendered geometry (see agents.md CI/CD section).
 hardware-gen/build/
-hardware-gen/output/
+hardware-gen/output/*
+!hardware-gen/output/*.svg
 hardware-gen/.venv/
 hardware-gen/.uv-cache/
 

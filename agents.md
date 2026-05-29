@@ -7,7 +7,7 @@
 **Technical Stack:**
 - **Frontend**: Pure client-side JavaScript (no build step), hosted on GitHub Pages. Core modules handle rendering (`renderer.js`), JSCAD geometry evaluation in a Web Worker (`jscad-worker.js`), icon/standard catalog browsing (`catalog.js`), and the GitHub contribution flow (`github-contrib.js`).
 - **Print Agent**: A local Python HTTP server (`print-agent/agent.py`) running on `localhost:9100` via `uv run`. It receives base64 PNG label images from the browser and converts them to Brother raster protocol data for USB printing.
-- **Standards**: The `standards.json` catalog defines the available hardware label standards and is rendered in the app from each standard's generated PNG `image`. `standards.json` is a **generated file** — source of truth is the per-hardware-type configs in `hardware-gen/config/` (`bolts_screws.yaml`, `nuts.yaml`, `washers.yaml`, `misc.yaml`; geometry from the FreeCAD pipeline). Standards are no longer user-contributable in the browser.
+- **Standards**: The `standards.json` catalog defines the available hardware label standards and is rendered in the app from each standard's generated SVG `image` (produced by the FreeCAD pipeline into `hardware-gen/output/`). `standards.json` is a **generated file** — source of truth is the per-hardware-type configs in `hardware-gen/config/` (`bolts_screws.yaml`, `nuts.yaml`, `washers.yaml`, `misc.yaml`; geometry from the FreeCAD pipeline). Standards are no longer user-contributable in the browser.
 - **Custom images**: Community-contributed icons live in `images/custom/*.svg` and surface under **Icon → Custom**. The `custom-icons.json` manifest is a **generated file** — source of truth is the SVGs themselves (name/keywords carried in each SVG's `<title>`/`<desc>`). Authored and submitted via `contribute.html`.
 
 ---
@@ -136,7 +136,9 @@ all config files and fails on: duplicate `id`s, a missing/empty `designations` l
 render `name`s (they become output filenames). This is what makes "build but don't list"
 (or a renamed-but-not-updated image) impossible to merge.
 
-Standards render in the app from each entry's committed PNG `image`.
+Standards render in the app from each entry's committed SVG `image` (a view
+produced by the FreeCAD pipeline into `hardware-gen/output/`). Standards with no
+render recipe have no `image` and show without a thumbnail.
 
 ---
 
@@ -174,7 +176,7 @@ Publishes the static site (the entire repo root) to GitHub Pages.
 - **Concurrency**: group `pages`, `cancel-in-progress: true` — a newer push supersedes an in-flight deploy.
 - **Permissions**: `pages: write`, `id-token: write` (required by `deploy-pages`).
 - **Steps**: `checkout` → `setup-uv` → `uv sync` (in `hardware-gen`) → **generate `standards.json` + `custom-icons.json`** → `configure-pages` → `upload-pages-artifact` (path `.`, the whole repo) → `deploy-pages`.
-- **Implication**: anything committed to `main` outside `print-agent/` ships to the live site. `standards.json` and `custom-icons.json` are **generated here at deploy time** (not stored in git) from their sources; the committed PNG `image`s and `output/*.svg` are served as-is.
+- **Implication**: anything committed to `main` outside `print-agent/` ships to the live site. `standards.json` and `custom-icons.json` are **generated here at deploy time** (not stored in git) from their sources; the committed `hardware-gen/output/*.svg` files are served as-is.
 
 ### `hardware-gen.yml` — Hardware artifact generation & validation
 
