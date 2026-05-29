@@ -11,16 +11,6 @@ standards:
         # No length for washers; the workbench derives thickness from the standard.
         views: [top]
 
-  # Catalog-only — the FreeCAD Fasteners workbench ships no split/spring lock
-  # washer (its Washer category is plain washers only), so this can't render.
-  - id: din127
-    description: "Spring lock washers (split lock washers) for hexagon head screws"
-    designations:
-      - { system: DIN, code: "127" }
-    renders:
-        - size: M4
-          views: [iso, top]
-
   # Catalog-only — bent/saddle-type spring lock washer; no ISO equivalent.
   - id: din128a
     description: "Spring lock washers, bent type (saddle lock washers)"
