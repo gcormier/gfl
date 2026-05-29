@@ -239,6 +239,18 @@ gh api repos/gcormier/gfl/branches/main/protection --method PUT --input - <<'EOF
 EOF
 ```
 
+**`enforce_admins: false` is load-bearing — don't flip it on.** Required status checks apply
+to *every* direct push to `main`, including the `hardware-gen.yml` publish push of generated
+SVGs. Classic branch protection has **no per-actor bypass**, so the only way that automated
+push gets through is the admin exemption: with "include administrators" OFF, a push
+authenticated as a repo admin bypasses the checks. The publish step therefore pushes with a
+**PAT owned by the admin** (`PUBLISH_PAT` secret), *not* `GITHUB_TOKEN` (which is not an admin
+and gets `GH006`). Turning `enforce_admins` on would re-block the bot. The PAT is a
+**fine-grained PAT scoped to this repo**, **Contents: Read and write** (push) + **Actions:
+Read and write** (dispatch `pages.yml`); rotate it before its expiry and re-run
+`gh secret set PUBLISH_PAT`. (A GitHub App on a *ruleset* bypass list is the no-expiry
+alternative we deliberately skipped — overkill for a single-admin repo.)
+
 **PR-verify vs merge-publish.** The `main`-scoped push trigger (alongside `pull_request`) is
 the single place the publish path runs: a PR is covered by its `pull_request` event, and the
 merge-to-`main` push (which has no associated PR) is where `hardware-gen.yml` commits SVGs +
@@ -310,5 +322,14 @@ Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardw
 
 **Caching notes**: the FreeCAD AppImage cache key is the download URL — bump `FREECAD_APPIMAGE_URL` to upgrade FreeCAD and the cache invalidates automatically. The Fasteners workbench cache rotates weekly so upstream fixes get picked up without manual cache busting.
 
-**Why the explicit `pages.yml` dispatch**: the bot's `git push` authenticates with `GITHUB_TOKEN`, and GitHub never starts new workflow runs from `GITHUB_TOKEN` pushes (recursion guard) — `[skip ci]` on the commit reinforces that. So the SVG commit alone would never deploy. `workflow_dispatch` is **exempt** from the recursion guard, so the `generate` job explicitly runs `gh workflow run pages.yml --ref main` (only when SVGs actually changed) to ship them. `[skip ci]` is still kept on the commit so it doesn't retrigger `hardware-gen.yml`. Net effect on a standard merge: `pages.yml` first deploys the new `standards.json` (briefly referencing a not-yet-committed SVG), then this dispatch fires a second deploy ~1–2 min later that includes the SVG — self-healing, no manual deploy needed.
+**Why the PAT push + explicit `pages.yml` dispatch**: the publish push authenticates with the
+admin `PUBLISH_PAT` (so it bypasses branch protection — see above) over an explicit token URL
+that overrides the `GITHUB_TOKEN` creds `actions/checkout` persisted. Because it's a **PAT, not
+`GITHUB_TOKEN`**, the push is **not** covered by GitHub's recursion guard — so `[skip ci]` on
+the commit is *load-bearing*: without it the SVG commit would retrigger `hardware-gen.yml`
+(render→commit→render loop). `[skip ci]` also suppresses the push-triggered `pages.yml`, so the
+`generate` job explicitly runs `gh workflow run pages.yml --ref main` (only when SVGs actually
+changed) to ship them. Net effect on a standard merge: `pages.yml` first deploys the new
+`standards.json` (briefly referencing a not-yet-committed SVG), then this dispatch fires a
+second deploy ~1–2 min later that includes the SVG — self-healing, no manual deploy needed.
 
