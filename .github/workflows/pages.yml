@@ -60,6 +60,17 @@ jobs:
           uv run python generate_standards_json.py
           uv run python generate_custom_icons.py
 
+      # Version is display-only (topbar pill + contribute.html). It is DERIVED
+      # here from the deployed commit, never hand-bumped — so it can't become a
+      # merge surface across concurrent PRs. VERSION + APP_VERSION ship as a
+      # static 'dev' placeholder in git and are overwritten in the artifact only.
+      - name: Inject deploy version (date + short SHA)
+        run: |
+          VER="$(git log -1 --format=%cd --date=format:%Y.%m.%d)+$(git rev-parse --short HEAD)"
+          echo "Deploy version: $VER"
+          printf '%s' "$VER" > VERSION
+          sed -i "s/const APP_VERSION = '[^']*';/const APP_VERSION = '$VER';/" app.js
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

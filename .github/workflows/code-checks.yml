@@ -1,0 +1,89 @@
+name: code-checks
+
+# Verification for *code* PRs (frontend + print agent). Deliberately scoped to
+# stay out of hardware-gen.yml's lane: it does NOT trigger on hardware-gen/**,
+# images/custom/**, or the generated catalogs — those are validated by
+# hardware-gen.yml. A frontend PR runs only this; a hardware PR runs only that.
+on:
+  push:
+    paths:
+      - "*.js"
+      - "*.html"
+      - "*.css"
+      - "print-agent/**"
+      - ".github/workflows/code-checks.yml"
+  pull_request:
+    paths:
+      - "*.js"
+      - "*.html"
+      - "*.css"
+      - "print-agent/**"
+      - ".github/workflows/code-checks.yml"
+
+concurrency:
+  group: code-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Frontend JS syntax check (no build step in this repo) ──────────────────
+  js:
+    name: JS syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # node --check parses every module without executing it — catches syntax
+      # errors (incl. in the web worker) before they ship to Pages. No deps,
+      # no config: the repo is intentionally build-free.
+      - name: node --check all *.js
+        run: |
+          shopt -s nullglob
+          fail=0
+          for f in *.js; do
+            echo "Checking $f"
+            node --check "$f" || fail=1
+          done
+          exit $fail
+
+  # ── Print agent lint (Python, PEP 723 inline-metadata script) ──────────────
+  # Lint only — no version-bump gate. A hand-edited monotonic version line would
+  # be a merge surface across concurrent PRs (the same reason standards.json and
+  # the web VERSION are generated, not authored — see agents.md).
+  print-agent:
+    name: Print agent lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      # F (pyflakes) + B (bugbear) only: catch real problems — undefined names,
+      # unused imports, broken f-strings, likely bugs. We deliberately skip the
+      # stylistic/modernization rules (E pycodestyle, UP pyupgrade, I isort) so
+      # the gate doesn't retroactively fail a working script over intentional
+      # style (e.g. the compact `if flag: append()` status decoder).
+      - name: Ruff lint (real-bug classes)
+        run: uvx ruff check --select F,B print-agent/agent.py
+
+  # ── Guard: generated catalogs must never be committed ──────────────────────
+  # standards.json / custom-icons.json are built at deploy time (pages.yml) and
+  # are .gitignore'd. If a PR force-adds one it becomes a merge surface and a
+  # stale-data risk — fail fast.
+  no-generated-artifacts:
+    name: No generated artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert generated catalogs are untracked
+        run: |
+          tracked="$(git ls-files standards.json custom-icons.json)"
+          if [ -n "$tracked" ]; then
+            echo "::error::These files are generated at deploy time and must not be committed:"
+            echo "$tracked"
+            echo "They are .gitignore'd — remove them from the index (git rm --cached)."
+            exit 1
+          fi
+          echo "OK — no generated catalogs tracked."

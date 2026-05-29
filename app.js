@@ -1,7 +1,9 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '2.0.0';
+// Placeholder for local dev. Overwritten at deploy time by pages.yml with the
+// derived date+SHA version (see agents.md). Do NOT hand-bump this.
+const APP_VERSION = 'dev';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')

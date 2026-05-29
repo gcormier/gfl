@@ -18,11 +18,14 @@ This file contains architectural notes, file breakdowns, and mandatory operation
 
 Whenever you (an AI agent) modify files in this repository, you **MUST** adhere to the following rules as a single atomic operation:
 
-1. **Website Changes -> Increment Web Site Version**
-   If you modify any frontend files (HTML, CSS, JS, JSON), you must increment the version number in:
-   - The `VERSION` file in the root directory.
-   - The `APP_VERSION` constant in `app.js`.
-   - Note: `contribute.html` reads the version dynamically from the `VERSION` file — no code change needed there.
+1. **Website Version — DO NOT hand-bump**
+   The web version is **display-only** (topbar pill + `contribute.html`) and is
+   **derived at deploy time** by `pages.yml` from the deployed commit
+   (`YYYY.MM.DD+<short-sha>`). The `VERSION` file and the `APP_VERSION` constant in
+   `app.js` ship as a static `dev` placeholder and are overwritten in the build
+   artifact only. **Never increment them** — a hand-bumped number would be a merge
+   surface across concurrent PRs (the same reason `standards.json` is generated, not
+   committed). Just edit the frontend; the version takes care of itself.
 
 2. **Print Agent Changes -> Increment Print Agent Version**
    If you modify the print agent backend (`print-agent/agent.py`), you must increment its version number in:
@@ -184,7 +187,17 @@ runs in the `hardware-gen.yml` dry-run job purely as that validation gate.
 
 ## CI/CD Pipelines (GitHub Actions)
 
-Two workflows live in `.github/workflows/`. Both carry real deployment logic — read this before editing either, since changes can publish to GitHub Pages or push commits back to `main`.
+Three workflows live in `.github/workflows/`. They are **scoped by path so each PR runs
+only what's relevant** — a hardware/icon PR runs `hardware-gen.yml`, a frontend/print-agent
+PR runs `code-checks.yml`, and neither overlaps the other. `pages.yml` and `hardware-gen.yml`
+carry real deployment logic (publish to Pages / push commits back to `main`) — read this
+before editing either.
+
+| Workflow | Triggers on (paths) | Purpose |
+|---|---|---|
+| `hardware-gen.yml` | `hardware-gen/{config,freecad_scripts,pipeline}/**`, `generate_custom_icons.py`, `images/custom/**`, `custom-icons.json` | Lint/validate + FreeCAD render of hardware artifacts |
+| `code-checks.yml` | `*.js`, `*.html`, `*.css`, `print-agent/**` | Verify frontend + print-agent PRs |
+| `pages.yml` | push to `main` (deploy only; PRs don't run it) | Build catalogs + version, deploy to Pages |
 
 ### `pages.yml` — Deploy to GitHub Pages
 
@@ -193,8 +206,31 @@ Publishes the static site (the entire repo root) to GitHub Pages.
 - **Triggers**: push to `main` (ignoring `print-agent/**`, which is never deployed) and manual `workflow_dispatch`.
 - **Concurrency**: group `pages`, `cancel-in-progress: true` — a newer push supersedes an in-flight deploy.
 - **Permissions**: `pages: write`, `id-token: write` (required by `deploy-pages`).
-- **Steps**: `checkout` → `setup-uv` → `uv sync` (in `hardware-gen`) → **generate `standards.json` + `custom-icons.json`** → `configure-pages` → `upload-pages-artifact` (path `.`, the whole repo) → `deploy-pages`.
+- **Steps**: `checkout` → `setup-uv` → `uv sync` (in `hardware-gen`) → **generate `standards.json` + `custom-icons.json`** → **inject deploy version** → `configure-pages` → `upload-pages-artifact` (path `.`, the whole repo) → `deploy-pages`.
+- **Deploy version injection**: computes `YYYY.MM.DD+<short-sha>` from the deployed commit and overwrites the `VERSION` file and the `APP_VERSION` line in `app.js` **in the artifact only** (never committed). This is why the version is never hand-bumped — see mandatory rule #1.
 - **Implication**: anything committed to `main` outside `print-agent/` ships to the live site. `standards.json` and `custom-icons.json` are **generated here at deploy time** (not stored in git) from their sources; the committed `hardware-gen/output/*.svg` files are served as-is.
+
+### `code-checks.yml` — Frontend & print-agent PR verification
+
+Lightweight, fast checks for code PRs. **Carries no deploy logic and pushes nothing** —
+purely a gate. Scoped to code paths and deliberately excludes `hardware-gen/**` so it
+never double-runs against `hardware-gen.yml`.
+
+- **Triggers**: push **and** pull_request touching `*.js`, `*.html`, `*.css`,
+  `print-agent/**`, or the workflow file.
+- **Concurrency**: group `code-checks-${{ github.ref }}`, `cancel-in-progress: true`.
+- **Jobs** (parallel, no FreeCAD, no heavy deps):
+  1. **`js`** — `node --check` on every root `*.js`. Parses (doesn't execute) each module,
+     catching syntax errors — including the web worker — before they ship. No build step,
+     no lint config; the repo is intentionally build-free.
+  2. **`print-agent`** — `uvx ruff check --select F,B print-agent/agent.py`. Pyflakes +
+     bugbear only (undefined names, unused imports, likely bugs) — **not** style/modernization
+     (E/UP/I), so it won't retroactively fail the script over intentional compact style. Lint
+     only; **no version-bump gate** (a hand-edited version line is a merge surface — same
+     reasoning as the web version).
+  3. **`no-generated-artifacts`** — fails if `standards.json` or `custom-icons.json` are
+     tracked in git. They're built at deploy time and `.gitignore`d; committing one makes it
+     a merge surface and a stale-data risk.
 
 ### `hardware-gen.yml` — Hardware artifact generation & validation
 
