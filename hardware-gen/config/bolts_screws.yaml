@@ -41,3 +41,12 @@ standards:
     designations:
       - { system: ISO, code: "10642" }
       - { system: DIN, code: "7991" }
+
+  - id: asmeb18.2.1
+    description: "Hex head cap screws (UNC) — covers 1/4-20 and other UNC sizes"
+    designations:
+      - { system: ASME, code: "B18.2.1" }
+    renders:
+      - size: 1/4 in
+        length: 1
+        views: [iso, side]
