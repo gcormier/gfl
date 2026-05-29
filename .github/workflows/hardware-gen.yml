@@ -182,7 +182,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git rm --ignore-unmatch hardware-gen/output/*.svg
+          # -f: regenerated SVGs may differ from the committed copies (local
+          # modifications), which plain `git rm` refuses. We re-add every
+          # current file immediately after, so forcing removal just lets
+          # genuinely-deleted renders drop out of the index.
+          git rm -f --ignore-unmatch hardware-gen/output/*.svg
           git add hardware-gen/output/*.svg || true
           if git diff --cached --quiet; then
             echo "No SVG changes to commit."
