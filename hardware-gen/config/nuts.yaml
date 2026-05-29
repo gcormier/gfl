@@ -18,4 +18,4 @@ standards:
       - { system: DIN, code: "985" }
     renders:
       - size: M8
-        views: [top, iso]
+        views: [iso, top]
