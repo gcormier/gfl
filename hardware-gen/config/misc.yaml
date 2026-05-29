@@ -28,7 +28,7 @@ standards:
       - { system: ISO, code: "8752" }
       - { system: DIN, code: "1481" }
     renders:
-      - size: 6mm
+      - size: 6 mm
         views: [iso]
   # ── Wing nuts ─────────────────────────────────────────────────────────────
   # hardware_type overrides the default — this is a nut, but it lives in misc
