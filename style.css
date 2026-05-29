@@ -353,6 +353,14 @@ select.form-input {
   box-shadow: 0 4px 16px rgba(0,0,0,0.10);
 }
 
+.standards-scroll-list {
+  border: 1px solid var(--rule);
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--surface);
+  margin-top: 4px;
+}
+
 .search-item {
   padding: 8px 10px;
   cursor: pointer;
@@ -364,6 +372,8 @@ select.form-input {
 }
 .search-item:last-child { border-bottom: none; }
 .search-item:hover, .search-item.highlighted { background: var(--rule-soft); }
+.search-item.selected { background: #dbeafe; }
+.search-item.selected .search-item-code { color: var(--accent); }
 
 .search-item-code { font-weight: 700; font-size: 0.78rem; color: var(--accent); }
 .search-item-desc { font-size: 0.72rem; color: var(--ink-2); }

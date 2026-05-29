@@ -1,7 +1,7 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '1.9.2';
+const APP_VERSION = '1.9.3';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')
@@ -31,6 +31,7 @@ async function init() {
   const el = document.getElementById('appVersion');
   if (el) el.textContent = `v${APP_VERSION}`;
   await loadStandards();
+  renderStandardsList('');
   bindEvents();
   initSegmentedControls();
   initViewChips();
@@ -53,7 +54,6 @@ function bindEvents() {
   // Hide dropdowns on outside click
   document.addEventListener('click', e => {
     if (!e.target.closest('.search-container')) {
-      document.getElementById('searchResults').hidden = true;
       document.getElementById('iconSearchResults').hidden = true;
       document.getElementById('customIconSearchResults').hidden = true;
     }

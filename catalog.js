@@ -9,16 +9,11 @@ async function loadStandards() {
 }
 // ─── Standard Search ──────────────────────────────────────────────────────────
 
-function onStandardSearch(e) {
-  const q = e.target.value.trim().toLowerCase();
-  const results = document.getElementById('searchResults');
-
-  if (q.length < 1) {
-    results.hidden = true;
-    return;
-  }
-
-  const matches = standards.filter(s => {
+function renderStandardsList(filter) {
+  const list = document.getElementById('standardsList');
+  if (!list) return;
+  const q = filter.trim().toLowerCase();
+  const matches = q.length === 0 ? standards : standards.filter(s => {
     if (s.description.toLowerCase().includes(q)) return true;
     if (s.id.toLowerCase().includes(q)) return true;
     for (const d of s.designations) {
@@ -26,42 +21,48 @@ function onStandardSearch(e) {
       if (d.system.toLowerCase() === q || d.code.toLowerCase() === q) return true;
     }
     return false;
-  }).slice(0, 20);
+  });
 
-  results.innerHTML = '';
+  list.innerHTML = '';
   if (matches.length === 0) {
-    results.innerHTML = '<div class="search-no-results">No results</div>';
-  } else {
-    matches.forEach(s => {
-      const item = document.createElement('div');
-      item.className = 'search-item';
-      item.dataset.id = s.id;
-      const label = s.designations.map(d => `${d.system} ${d.code}`).join(' / ');
-      item.innerHTML = `
-        <span class="search-item-code">${escHtml(label)}</span>
-        <span class="search-item-desc">${escHtml(s.description.slice(0, 80))}</span>
-      `;
-      item.addEventListener('click', () => selectStandard(s));
-      results.appendChild(item);
-    });
+    list.innerHTML = '<div class="search-no-results">No results</div>';
+    return;
   }
-  results.hidden = false;
+  matches.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'search-item';
+    if (selectedStandard && selectedStandard.id === s.id) item.classList.add('selected');
+    item.dataset.id = s.id;
+    const label = s.designations.map(d => `${d.system} ${d.code}`).join(' / ');
+    item.innerHTML = `
+      <span class="search-item-code">${escHtml(label)}</span>
+      <span class="search-item-desc">${escHtml(s.description.slice(0, 80))}</span>
+    `;
+    item.addEventListener('click', () => selectStandard(s));
+    list.appendChild(item);
+  });
 }
+
+function onStandardSearch(e) {
+  renderStandardsList(e.target.value);
+  searchHighlightIdx = -1;
+}
+
 function onSearchKeydown(e) {
-  const results = document.getElementById('searchResults');
-  const items = results.querySelectorAll('.search-item');
+  const list = document.getElementById('standardsList');
+  const items = list.querySelectorAll('.search-item');
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     searchHighlightIdx = Math.min(searchHighlightIdx + 1, items.length - 1);
     updateHighlight(items);
+    items[searchHighlightIdx]?.scrollIntoView({ block: 'nearest' });
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
     searchHighlightIdx = Math.max(searchHighlightIdx - 1, 0);
     updateHighlight(items);
+    items[searchHighlightIdx]?.scrollIntoView({ block: 'nearest' });
   } else if (e.key === 'Enter' && searchHighlightIdx >= 0 && items[searchHighlightIdx]) {
     items[searchHighlightIdx].click();
-  } else if (e.key === 'Escape') {
-    results.hidden = true;
   }
 }
 
@@ -71,9 +72,8 @@ function updateHighlight(items) {
 
 function selectStandard(s) {
   selectedStandard = s;
-  document.getElementById('searchResults').hidden = true;
-  document.getElementById('standardSearch').value = '';
   searchHighlightIdx = -1;
+  renderStandardsList(document.getElementById('standardSearch').value);
 
   const box = document.getElementById('selectedStandard');
   const img = document.getElementById('standardImage');
@@ -106,7 +106,7 @@ function clearStandard() {
   selectedStandard = null;
   document.getElementById('selectedStandard').hidden = true;
   document.getElementById('standardPrefGroup').hidden = true;
-  document.getElementById('standardSearch').value = '';
+  renderStandardsList(document.getElementById('standardSearch').value);
   updateStarButtons();
   scheduleRender();
 }
