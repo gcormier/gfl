@@ -5,6 +5,7 @@ on:
     paths:
       - "hardware-gen/config/**"
       - "hardware-gen/freecad_scripts/**"
+      - "hardware-gen/pipeline/**"
       - "hardware-gen/generate_custom_icons.py"
       - "images/custom/**"
       - "custom-icons.json"
@@ -13,6 +14,7 @@ on:
     paths:
       - "hardware-gen/config/**"
       - "hardware-gen/freecad_scripts/**"
+      - "hardware-gen/pipeline/**"
       - "hardware-gen/generate_custom_icons.py"
       - "images/custom/**"
       - "custom-icons.json"

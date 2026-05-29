@@ -115,41 +115,122 @@ def _attrs(tag: str) -> dict[str, str]:
     return dict(re.findall(r'(\w+)\s*=\s*"([^"]*)"', tag))
 
 
+# A 2D affine transform as (a, b, c, d, e, f), mapping
+# (x, y) -> (a*x + c*y + e, b*x + d*y + f).
+Affine = tuple[float, float, float, float, float, float]
+_IDENTITY: Affine = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+
+
+def _mul(m: Affine, n: Affine) -> Affine:
+    """Compose two affines so applying the result equals applying *n* then *m*."""
+    a1, b1, c1, d1, e1, f1 = m
+    a2, b2, c2, d2, e2, f2 = n
+    return (
+        a1 * a2 + c1 * b2,
+        b1 * a2 + d1 * b2,
+        a1 * c2 + c1 * d2,
+        b1 * c2 + d1 * d2,
+        a1 * e2 + c1 * f2 + e1,
+        b1 * e2 + d1 * f2 + f1,
+    )
+
+
+def _parse_transform(s: str) -> Affine:
+    """Parse an SVG ``transform`` attribute into a single affine. Supports
+    matrix/translate/scale/rotate, composed left-to-right per the SVG spec."""
+    import math
+
+    m = _IDENTITY
+    for name, args in re.findall(r"(\w+)\s*\(([^)]*)\)", s):
+        v = [float(t) for t in re.findall(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", args)]
+        if name == "matrix" and len(v) == 6:
+            t: Affine = (v[0], v[1], v[2], v[3], v[4], v[5])
+        elif name == "translate":
+            t = (1.0, 0.0, 0.0, 1.0, v[0], v[1] if len(v) > 1 else 0.0)
+        elif name == "scale":
+            sx = v[0]
+            sy = v[1] if len(v) > 1 else sx
+            t = (sx, 0.0, 0.0, sy, 0.0, 0.0)
+        elif name == "rotate":
+            rad = math.radians(v[0])
+            cos, sin = math.cos(rad), math.sin(rad)
+            rot: Affine = (cos, sin, -sin, cos, 0.0, 0.0)
+            if len(v) >= 3:  # rotation about a point
+                cx, cy = v[1], v[2]
+                t = _mul(_mul((1.0, 0, 0, 1.0, cx, cy), rot), (1.0, 0, 0, 1.0, -cx, -cy))
+            else:
+                t = rot
+        else:
+            continue
+        m = _mul(m, t)
+    return m
+
+
 def compute_bbox(
     svg_text: str, pad_frac: float = 0.04, pad_min: float = 0.5
 ) -> tuple[float, float, float, float]:
     """Return a tight ``(x, y, width, height)`` for all drawable geometry in
     *svg_text*. Padding is a fraction of the larger dimension (min ``pad_min``).
     Falls back to a 200×200 box centred on the origin if nothing parses."""
+    import math
+
     xs: list[float] = []
     ys: list[float] = []
 
-    def add(x: float, y: float) -> None:
-        xs.append(x)
-        ys.append(y)
+    # Walk tags in document order, tracking the active transform stack so
+    # geometry inside <g transform="..."> groups is bounded in its real
+    # (transformed) position rather than its untransformed local coordinates.
+    stack: list[Affine] = [_IDENTITY]
 
-    for m in re.finditer(r'\bd\s*=\s*"([^"]*)"', svg_text):
-        _accumulate_path_points(m.group(1), add)
+    def add(m: Affine, x: float, y: float) -> None:
+        a, b, c, d, e, f = m
+        xs.append(a * x + c * y + e)
+        ys.append(b * x + d * y + f)
 
-    for m in re.finditer(r"<(?:ellipse|circle)\b[^>]*>", svg_text):
-        a = _attrs(m.group(0))
-        try:
-            ccx = float(a.get("cx", 0))
-            ccy = float(a.get("cy", 0))
-            # Conservative extent: largest radius (covers any rotation).
-            r = max(float(a.get("rx", 0)), float(a.get("ry", 0)), float(a.get("r", 0)))
-        except ValueError:
+    for tag in re.finditer(r"<(/?)(\w+)([^>]*?)(/?)>", svg_text):
+        close, name, attr_str, self_close = tag.groups()
+        if name == "g":
+            if close:
+                if len(stack) > 1:
+                    stack.pop()
+            elif not self_close:
+                t = _attrs(attr_str).get("transform")
+                stack.append(_mul(stack[-1], _parse_transform(t)) if t else stack[-1])
             continue
-        add(ccx - r, ccy - r)
-        add(ccx + r, ccy + r)
-
-    for m in re.finditer(r"<line\b[^>]*>", svg_text):
-        a = _attrs(m.group(0))
-        try:
-            add(float(a.get("x1", 0)), float(a.get("y1", 0)))
-            add(float(a.get("x2", 0)), float(a.get("y2", 0)))
-        except ValueError:
+        if close:
             continue
+
+        cur = stack[-1]
+        a = _attrs(attr_str)
+        if name in ("ellipse", "circle"):
+            try:
+                ccx = float(a.get("cx", 0))
+                ccy = float(a.get("cy", 0))
+                r = float(a.get("r", 0))
+                rx = float(a.get("rx", 0)) or r
+                ry = float(a.get("ry", 0)) or r
+            except ValueError:
+                continue
+            # Exact axis-aligned bbox of the ellipse under the active affine.
+            ta, tb, tc, td, te, tf = cur
+            cnx = ta * ccx + tc * ccy + te
+            cny = tb * ccx + td * ccy + tf
+            half_w = math.hypot(ta * rx, tc * ry)
+            half_h = math.hypot(tb * rx, td * ry)
+            xs.extend((cnx - half_w, cnx + half_w))
+            ys.extend((cny - half_h, cny + half_h))
+        elif name == "line":
+            try:
+                add(cur, float(a.get("x1", 0)), float(a.get("y1", 0)))
+                add(cur, float(a.get("x2", 0)), float(a.get("y2", 0)))
+            except ValueError:
+                continue
+        elif "d" in a:
+
+            def emit(x: float, y: float, _m: Affine = cur) -> None:
+                add(_m, x, y)
+
+            _accumulate_path_points(a["d"], emit)
 
     if not xs or not ys:
         return -100.0, -100.0, 200.0, 200.0

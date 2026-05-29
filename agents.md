@@ -194,7 +194,7 @@ Publishes the static site (the entire repo root) to GitHub Pages.
 
 Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardware artifacts, committing the resulting SVGs back to the repo so Pages can serve them.
 
-- **Triggers**: push **and** pull_request touching `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`, `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs).
+- **Triggers**: push **and** pull_request touching `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`, `hardware-gen/pipeline/**` (render/crop logic), `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs).
 - **Concurrency**: group `hardware-gen-${{ github.ref }}`, `cancel-in-progress: true` — one run per branch to avoid clobbering the artifact cache; other branches run independently.
 - **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`.
 
