@@ -73,6 +73,7 @@ function updateHighlight(items) {
 const VIEW_LABELS = { iso: 'ISO', top: 'Top', side: 'Side', front: 'Front' };
 
 function initViewChips(standard) {
+  if (!standard) { viewChipOrder = []; selectedViews = []; return; }
   const views = standard.renderViews ? Object.keys(standard.renderViews) : [];
   viewChipOrder = [...views];
   if (views.length === 0) {
