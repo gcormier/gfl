@@ -78,15 +78,25 @@ deploy time and never committed, so never edit it directly.
 
 To add or change a standard:
 
-1. Edit the relevant config file under
+1. Look up valid sizes and lengths for the standard using the scaffold tool:
+
+   ```bash
+   cd hardware-gen
+   hardware-gen scaffold ISO8752              # emit a ready-to-paste render snippet
+   hardware-gen scaffold ISO8752 --list       # show all valid sizes and lengths
+   ```
+
+   You can also browse the full parameter reference without running any tools:
+   [`hardware-gen/docs/fastener-parameters.md`](hardware-gen/docs/fastener-parameters.md)
+
+2. Edit the relevant config file under
    [`hardware-gen/config/`](hardware-gen/config/) (`bolts_screws.yaml`,
    `nuts.yaml`, `washers.yaml`, or `misc.yaml`). Each file is the single
    source of truth for both the catalog metadata and the geometry render recipe.
-   Point each render's `image` at the SVG the pipeline will produce, e.g.
-   `/hardware-gen/output/M8_HexNut_top.svg`.
-2. Commit **only** the YAML and open a PR. Do **not** commit `standards.json` (it is
+   Paste the scaffold output into the `renders:` key of the appropriate entry.
+3. Commit **only** the YAML and open a PR. Do **not** commit `standards.json` (it is
    git-ignored and built at deploy time) or the rendered SVGs.
-3. On merge to `main`, CI (`hardware-gen.yml`) renders the geometry with FreeCAD and
+4. On merge to `main`, CI (`hardware-gen.yml`) renders the geometry with FreeCAD and
    commits the `hardware-gen/output/*.svg`, then the Pages deploy regenerates
    `standards.json`. The standard goes live automatically.
 
