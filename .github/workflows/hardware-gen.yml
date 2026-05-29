@@ -176,6 +176,12 @@ jobs:
           HW_GEN_PARAMS: '{"mode":"check","path":"pipeline/fastener_types.json"}'
         run: $FREECADCMD freecad_scripts/dump_fastener_types.py
 
+      - name: Recheck fastener-capabilities snapshot against the live workbench
+        env:
+          QT_QPA_PLATFORM: offscreen
+          HW_GEN_PARAMS: '{"mode":"check","path":"pipeline/fastener_capabilities.json"}'
+        run: $FREECADCMD freecad_scripts/dump_fastener_capabilities.py
+
       - name: Generate hardware artifacts
         env:
           QT_QPA_PLATFORM: offscreen
@@ -211,7 +217,13 @@ jobs:
         if: github.event_name != 'pull_request'
         working-directory: ${{ github.workspace }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PUBLISH_PAT is a PAT owned by the repo admin. main is protected with
+          # required status checks (the gate jobs), which reject GITHUB_TOKEN's
+          # [skip ci] push (no passing checks → GH006). With "include admins" OFF
+          # (enforce_admins=false), an admin's token bypasses those checks, so we
+          # push as the admin instead of as github-actions[bot]. See agents.md › CI/CD.
+          GH_TOKEN: ${{ secrets.PUBLISH_PAT }}
+          PUBLISH_PAT: ${{ secrets.PUBLISH_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -225,11 +237,14 @@ jobs:
             echo "No SVG changes to commit."
           else
             git commit -m "chore: update generated SVGs [skip ci]"
-            git push
-            # The commit above uses GITHUB_TOKEN, whose pushes never trigger new
-            # workflow runs (recursion guard) — and [skip ci] would suppress them
-            # anyway. workflow_dispatch is exempt from that guard, so explicitly
-            # dispatch the deploy to ship the new SVGs to Pages.
+            # Push over an explicit PAT URL (overrides the GITHUB_TOKEN creds that
+            # actions/checkout persisted) so the push is attributed to the admin and
+            # bypasses branch protection. [skip ci] is load-bearing here: a PAT push
+            # is NOT covered by the GITHUB_TOKEN recursion guard, so without it this
+            # commit would retrigger hardware-gen (render→commit→render loop).
+            git push "https://x-access-token:${PUBLISH_PAT}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+            # [skip ci] also suppresses the push-triggered pages.yml, so dispatch it
+            # explicitly to ship the new SVGs to Pages.
             echo "Dispatching Pages deploy for updated SVGs..."
             gh workflow run pages.yml --ref main
           fi

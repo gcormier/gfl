@@ -217,10 +217,12 @@ they are *not* path-filtered at the `on:` level. This is deliberate and is what 
 and blocks the PR. Path-filtered triggers would mean a hardware PR never reports the code
 checks (and vice-versa), wedging the merge. Instead each workflow starts a tiny `changes`
 job (`dorny/paths-filter`) that detects relevant paths; the heavy jobs carry
-`if: needs.changes.outputs.<x> == 'true'` and **skip** when nothing relevant changed. A
-skipped job counts as **passing** for required checks, so the irrelevant workflow clears
-instantly while the relevant one must genuinely pass. The expensive work (FreeCAD render,
-etc.) still only runs when relevant — only the ~2-second `changes`/`gate` jobs run extra.
+`if: needs.changes.outputs.<x> == 'true'` and **skip** when nothing relevant changed. We
+require only the always-running `gate` job (below) — never the individual jobs — so branch
+protection never waits on a check that didn't run; the gate treats a skipped dependency as
+OK. The irrelevant workflow therefore clears instantly while the relevant one must genuinely
+pass. The expensive work (FreeCAD render, etc.) still only runs when relevant — only the
+~2-second `changes`/`gate` jobs run extra.
 
 **One required check per workflow — the `gate` job.** Each workflow ends with a `gate` job
 (`if: always()`, `needs:` all the real jobs) that fails only if a dependency *failed or was
@@ -228,8 +230,15 @@ cancelled* (skipped/success both pass). Its check name — **`code-checks gate`*
 **`hardware-gen gate`** — is the single stable context to require in branch protection.
 **Require exactly those two** (not the individual `js`/`lint`/etc. names): they always
 report, collapse the sub-jobs into one green check, and survive adding/removing sub-jobs
-without touching branch-protection config. Set via the API (the Settings UI search only
-lists previously-seen checks):
+without touching branch-protection config.
+
+> **Adding a verification job?** Gate it on `changes` (`needs: changes` +
+> `if: needs.changes.outputs.<x> == 'true'`) **and add it to that workflow's `gate`
+> `needs:` list.** A job that isn't in the gate's `needs:` is invisible to branch
+> protection — effectively optional, even if it fails. This is the one wiring step that's
+> easy to forget and silently weakens the gate.
+
+Set required checks via the API (the Settings UI search only lists previously-seen checks):
 
 ```bash
 gh api repos/gcormier/gfl/branches/main/protection --method PUT --input - <<'EOF'
@@ -238,6 +247,18 @@ gh api repos/gcormier/gfl/branches/main/protection --method PUT --input - <<'EOF
   "enforce_admins": false, "required_pull_request_reviews": null, "restrictions": null }
 EOF
 ```
+
+**`enforce_admins: false` is load-bearing — don't flip it on.** Required status checks apply
+to *every* direct push to `main`, including the `hardware-gen.yml` publish push of generated
+SVGs. Classic branch protection has **no per-actor bypass**, so the only way that automated
+push gets through is the admin exemption: with "include administrators" OFF, a push
+authenticated as a repo admin bypasses the checks. The publish step therefore pushes with a
+**PAT owned by the admin** (`PUBLISH_PAT` secret), *not* `GITHUB_TOKEN` (which is not an admin
+and gets `GH006`). Turning `enforce_admins` on would re-block the bot. The PAT is a
+**fine-grained PAT scoped to this repo**, **Contents: Read and write** (push) + **Actions:
+Read and write** (dispatch `pages.yml`); rotate it before its expiry and re-run
+`gh secret set PUBLISH_PAT`. (A GitHub App on a *ruleset* bypass list is the no-expiry
+alternative we deliberately skipped — overkill for a single-admin repo.)
 
 **PR-verify vs merge-publish.** The `main`-scoped push trigger (alongside `pull_request`) is
 the single place the publish path runs: a PR is covered by its `pull_request` event, and the
@@ -310,5 +331,14 @@ Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardw
 
 **Caching notes**: the FreeCAD AppImage cache key is the download URL — bump `FREECAD_APPIMAGE_URL` to upgrade FreeCAD and the cache invalidates automatically. The Fasteners workbench cache rotates weekly so upstream fixes get picked up without manual cache busting.
 
-**Why the explicit `pages.yml` dispatch**: the bot's `git push` authenticates with `GITHUB_TOKEN`, and GitHub never starts new workflow runs from `GITHUB_TOKEN` pushes (recursion guard) — `[skip ci]` on the commit reinforces that. So the SVG commit alone would never deploy. `workflow_dispatch` is **exempt** from the recursion guard, so the `generate` job explicitly runs `gh workflow run pages.yml --ref main` (only when SVGs actually changed) to ship them. `[skip ci]` is still kept on the commit so it doesn't retrigger `hardware-gen.yml`. Net effect on a standard merge: `pages.yml` first deploys the new `standards.json` (briefly referencing a not-yet-committed SVG), then this dispatch fires a second deploy ~1–2 min later that includes the SVG — self-healing, no manual deploy needed.
+**Why the PAT push + explicit `pages.yml` dispatch**: the publish push authenticates with the
+admin `PUBLISH_PAT` (so it bypasses branch protection — see above) over an explicit token URL
+that overrides the `GITHUB_TOKEN` creds `actions/checkout` persisted. Because it's a **PAT, not
+`GITHUB_TOKEN`**, the push is **not** covered by GitHub's recursion guard — so `[skip ci]` on
+the commit is *load-bearing*: without it the SVG commit would retrigger `hardware-gen.yml`
+(render→commit→render loop). `[skip ci]` also suppresses the push-triggered `pages.yml`, so the
+`generate` job explicitly runs `gh workflow run pages.yml --ref main` (only when SVGs actually
+changed) to ship them. Net effect on a standard merge: `pages.yml` first deploys the new
+`standards.json` (briefly referencing a not-yet-committed SVG), then this dispatch fires a
+second deploy ~1–2 min later that includes the SVG — self-healing, no manual deploy needed.
 
