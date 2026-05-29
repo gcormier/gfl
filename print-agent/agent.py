@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# version: 0.4.11
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -31,6 +30,13 @@ Setup (Linux — one-time):
 The agent listens on http://localhost:9100 and accepts requests from the web app.
 Keep it running while printing; stop with Ctrl-C.
 """
+
+# Single source of truth for the agent version. Informational only (printed in
+# the startup banner) — the browser does not read or compare it. Bump this
+# deliberately when cutting a print-agent release. Unlike the web app's version,
+# the agent has no deploy/build step to derive a version into, so this stays a
+# plain hand-set release number.
+__version__ = "0.4.11"
 
 import argparse
 import base64
@@ -440,7 +446,7 @@ def main():
     status = get_status(_backend)
     printer_info = f"found: {status['printer']} ✓" if status["ready"] else "not detected"
 
-    print(f"GFL print agent v0.4.11 — http://{args.host}:{args.port}")
+    print(f"GFL print agent v{__version__} — http://{args.host}:{args.port}")
     print(f"Backend:  {_backend}")
     print(f"Printer:  {printer_info}")
     if status.get("warning"):

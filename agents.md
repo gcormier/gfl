@@ -28,8 +28,12 @@ Whenever you (an AI agent) modify files in this repository, you **MUST** adhere 
    committed). Just edit the frontend; the version takes care of itself.
 
 2. **Print Agent Changes -> Increment Print Agent Version**
-   If you modify the print agent backend (`print-agent/agent.py`), you must increment its version number in:
-   - `print-agent/agent.py` (look for the `# version: x.x.x` comment string).
+   If you modify the print agent backend (`print-agent/agent.py`), increment its version in the
+   single `__version__ = "x.x.x"` constant near the top of `print-agent/agent.py` (the startup
+   banner reads from it — there is exactly one place). Unlike the web version, this is a plain
+   hand-set release number: the agent is run directly by users (`uv run agent.py`) with no
+   deploy/build step to derive a version into, and the value is informational only (the browser
+   never reads it). Bump it deliberately when cutting an agent release.
 
 3. **Always Commit & Push**
    Any time you touch/modify a file or complete a requested change, you **MUST** run a `git commit` and `git push` without waiting for the user to prompt you:
