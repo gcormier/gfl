@@ -89,3 +89,8 @@ hardware-gen/.uv-cache/
 # (hardware-gen/config/*.yaml, images/custom/*.svg). Never edit or commit by hand.
 /standards.json
 /custom-icons.json
+
+# Web version — written at deploy time by pages.yml (date+short-sha). Display-only
+# and never hand-authored, so it's not tracked (would be a merge surface). Local
+# dev simply has no VERSION file; contribute.html's fetch fails gracefully.
+/VERSION

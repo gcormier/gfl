@@ -21,11 +21,13 @@ Whenever you (an AI agent) modify files in this repository, you **MUST** adhere 
 1. **Website Version — DO NOT hand-bump**
    The web version is **display-only** (topbar pill + `contribute.html`) and is
    **derived at deploy time** by `pages.yml` from the deployed commit
-   (`YYYY.MM.DD+<short-sha>`). The `VERSION` file and the `APP_VERSION` constant in
-   `app.js` ship as a static `dev` placeholder and are overwritten in the build
-   artifact only. **Never increment them** — a hand-bumped number would be a merge
-   surface across concurrent PRs (the same reason `standards.json` is generated, not
-   committed). Just edit the frontend; the version takes care of itself.
+   (`YYYY.MM.DD+<short-sha>`). The **`VERSION` file is not tracked** — it's `.gitignore`d
+   and *written* into the deploy artifact by `pages.yml` (local dev simply has no file;
+   `contribute.html`'s fetch fails gracefully). The `APP_VERSION` constant in `app.js` ships
+   as a static `dev` placeholder and is overwritten in the artifact only. **Never create or
+   increment them** — a hand-bumped number would be a merge surface across concurrent PRs
+   (the same reason `standards.json` is generated, not committed). Just edit the frontend;
+   the version takes care of itself.
 
 2. **Print Agent Changes -> Increment Print Agent Version**
    If you modify the print agent backend (`print-agent/agent.py`), increment its version in the
@@ -211,7 +213,7 @@ Publishes the static site (the entire repo root) to GitHub Pages.
 - **Concurrency**: group `pages`, `cancel-in-progress: true` — a newer push supersedes an in-flight deploy.
 - **Permissions**: `pages: write`, `id-token: write` (required by `deploy-pages`).
 - **Steps**: `checkout` → `setup-uv` → `uv sync` (in `hardware-gen`) → **generate `standards.json` + `custom-icons.json`** → **inject deploy version** → `configure-pages` → `upload-pages-artifact` (path `.`, the whole repo) → `deploy-pages`.
-- **Deploy version injection**: computes `YYYY.MM.DD+<short-sha>` from the deployed commit and overwrites the `VERSION` file and the `APP_VERSION` line in `app.js` **in the artifact only** (never committed). This is why the version is never hand-bumped — see mandatory rule #1.
+- **Deploy version injection**: computes `YYYY.MM.DD+<short-sha>` from the deployed commit, **writes** the `VERSION` file (untracked — created here), and overwrites the `APP_VERSION` line in `app.js` **in the artifact only** (never committed). This is why the version is never hand-bumped — see mandatory rule #1.
 - **Implication**: anything committed to `main` outside `print-agent/` ships to the live site. `standards.json` and `custom-icons.json` are **generated here at deploy time** (not stored in git) from their sources; the committed `hardware-gen/output/*.svg` files are served as-is.
 
 ### `code-checks.yml` — Frontend & print-agent PR verification
@@ -232,9 +234,9 @@ never double-runs against `hardware-gen.yml`.
      (E/UP/I), so it won't retroactively fail the script over intentional compact style. Lint
      only; **no version-bump gate** (a hand-edited version line is a merge surface — same
      reasoning as the web version).
-  3. **`no-generated-artifacts`** — fails if `standards.json` or `custom-icons.json` are
-     tracked in git. They're built at deploy time and `.gitignore`d; committing one makes it
-     a merge surface and a stale-data risk.
+  3. **`no-generated-artifacts`** — fails if `standards.json`, `custom-icons.json`, or
+     `VERSION` are tracked in git. They're written at deploy time and `.gitignore`d;
+     committing one makes it a merge surface and a stale-data risk.
 
 ### `hardware-gen.yml` — Hardware artifact generation & validation
 

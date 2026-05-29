@@ -67,23 +67,23 @@ jobs:
       - name: Ruff lint (real-bug classes)
         run: uvx ruff check --select F,B print-agent/agent.py
 
-  # ── Guard: generated catalogs must never be committed ──────────────────────
-  # standards.json / custom-icons.json are built at deploy time (pages.yml) and
-  # are .gitignore'd. If a PR force-adds one it becomes a merge surface and a
-  # stale-data risk — fail fast.
+  # ── Guard: deploy-generated files must never be committed ──────────────────
+  # standards.json / custom-icons.json / VERSION are written at deploy time
+  # (pages.yml) and are .gitignore'd. If a PR force-adds one it becomes a merge
+  # surface and a stale-data risk — fail fast.
   no-generated-artifacts:
     name: No generated artifacts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Assert generated catalogs are untracked
+      - name: Assert generated files are untracked
         run: |
-          tracked="$(git ls-files standards.json custom-icons.json)"
+          tracked="$(git ls-files standards.json custom-icons.json VERSION)"
           if [ -n "$tracked" ]; then
             echo "::error::These files are generated at deploy time and must not be committed:"
             echo "$tracked"
             echo "They are .gitignore'd — remove them from the index (git rm --cached)."
             exit 1
           fi
-          echo "OK — no generated catalogs tracked."
+          echo "OK — no generated files tracked."
