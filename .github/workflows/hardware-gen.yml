@@ -207,14 +207,31 @@ jobs:
       # (render + upload artifacts) to verify the geometry builds, but we never
       # commit or deploy: a PR checkout is a detached merge ref, and deploying
       # would ship unreviewed changes. Runs on push-to-main and workflow_dispatch.
+      # main is protected by a ruleset requiring the gate checks. GITHUB_TOKEN's
+      # push has no passing checks (the commit is [skip ci]) so it's rejected
+      # (GH006). We mint a short-lived token from a GitHub App that is on the
+      # ruleset's bypass list, so its push to main is allowed. See agents.md
+      # › CI/CD for the App setup (APP_ID / APP_PRIVATE_KEY secrets, permissions).
+      - name: Mint GitHub App token (bypasses branch ruleset for the publish push)
+        if: github.event_name != 'pull_request'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Commit generated SVGs to repo for GitHub Pages
         if: github.event_name != 'pull_request'
         working-directory: ${{ github.workspace }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # App token (not GITHUB_TOKEN): it bypasses the ruleset and carries the
+          # actions:write needed to dispatch pages.yml below.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${APP_SLUG}[bot]@users.noreply.github.com"
           # Stage adds, modifications, AND deletions in one go. -A on the
           # directory drops renders whose source standard was removed, while
           # picking up new/changed SVGs — without the working-tree-deleting
@@ -225,11 +242,13 @@ jobs:
             echo "No SVG changes to commit."
           else
             git commit -m "chore: update generated SVGs [skip ci]"
-            git push
-            # The commit above uses GITHUB_TOKEN, whose pushes never trigger new
-            # workflow runs (recursion guard) — and [skip ci] would suppress them
-            # anyway. workflow_dispatch is exempt from that guard, so explicitly
-            # dispatch the deploy to ship the new SVGs to Pages.
+            # Push over an explicit App-token URL (overrides the GITHUB_TOKEN creds
+            # actions/checkout persisted). [skip ci] is essential: an App-token push
+            # is NOT covered by the GITHUB_TOKEN recursion guard, so without it this
+            # commit would retrigger hardware-gen (and pages) in a loop.
+            git push "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+            # [skip ci] also suppresses the push-triggered pages.yml, so dispatch it
+            # explicitly to ship the new SVGs to Pages.
             echo "Dispatching Pages deploy for updated SVGs..."
             gh workflow run pages.yml --ref main
           fi

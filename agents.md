@@ -225,19 +225,22 @@ etc.) still only runs when relevant — only the ~2-second `changes`/`gate` jobs
 **One required check per workflow — the `gate` job.** Each workflow ends with a `gate` job
 (`if: always()`, `needs:` all the real jobs) that fails only if a dependency *failed or was
 cancelled* (skipped/success both pass). Its check name — **`code-checks gate`** and
-**`hardware-gen gate`** — is the single stable context to require in branch protection.
-**Require exactly those two** (not the individual `js`/`lint`/etc. names): they always
-report, collapse the sub-jobs into one green check, and survive adding/removing sub-jobs
-without touching branch-protection config. Set via the API (the Settings UI search only
-lists previously-seen checks):
+**`hardware-gen gate`** — is the single stable context to require. **Require exactly those
+two** (not the individual `js`/`lint`/etc. names): they always report, collapse the sub-jobs
+into one green check, and survive adding/removing sub-jobs without touching protection config.
 
-```bash
-gh api repos/gcormier/gfl/branches/main/protection --method PUT --input - <<'EOF'
-{ "required_status_checks": { "strict": true,
-    "contexts": ["code-checks gate", "hardware-gen gate"] },
-  "enforce_admins": false, "required_pull_request_reviews": null, "restrictions": null }
-EOF
-```
+**Enforced by a repository ruleset, not classic branch protection.** `main` is protected by a
+**ruleset** (`gh api repos/gcormier/gfl/rulesets`) rather than classic branch protection, for
+one reason: the `hardware-gen.yml` publish step has to push generated SVGs to `main`, and
+classic protection applies required checks to *every* direct push with **no per-actor
+exception** — so the bot's `[skip ci]` push (no passing checks) is rejected (`GH006`).
+Rulesets support a **bypass list**, so a dedicated **GitHub App** is added there and its push
+sails through while everyone else still needs the two gate checks. The ruleset requires
+`code-checks gate` + `hardware-gen gate` (strict / up-to-date), blocks deletion and
+force-push, and lists the App as a bypass actor. See **“Publish App + ruleset setup”** below
+for the exact creation steps and API payloads. Don't re-add classic branch protection on
+`main` — two layers would double-enforce and the classic layer (no bypass) would re-block the
+bot.
 
 **PR-verify vs merge-publish.** The `main`-scoped push trigger (alongside `pull_request`) is
 the single place the publish path runs: a PR is covered by its `pull_request` event, and the
@@ -310,5 +313,65 @@ Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardw
 
 **Caching notes**: the FreeCAD AppImage cache key is the download URL — bump `FREECAD_APPIMAGE_URL` to upgrade FreeCAD and the cache invalidates automatically. The Fasteners workbench cache rotates weekly so upstream fixes get picked up without manual cache busting.
 
-**Why the explicit `pages.yml` dispatch**: the bot's `git push` authenticates with `GITHUB_TOKEN`, and GitHub never starts new workflow runs from `GITHUB_TOKEN` pushes (recursion guard) — `[skip ci]` on the commit reinforces that. So the SVG commit alone would never deploy. `workflow_dispatch` is **exempt** from the recursion guard, so the `generate` job explicitly runs `gh workflow run pages.yml --ref main` (only when SVGs actually changed) to ship them. `[skip ci]` is still kept on the commit so it doesn't retrigger `hardware-gen.yml`. Net effect on a standard merge: `pages.yml` first deploys the new `standards.json` (briefly referencing a not-yet-committed SVG), then this dispatch fires a second deploy ~1–2 min later that includes the SVG — self-healing, no manual deploy needed.
+**Why the App token + explicit `pages.yml` dispatch**: the publish push must reach the
+ruleset-protected `main`, so it authenticates with a **GitHub App token** (minted by
+`actions/create-github-app-token` from the `APP_ID`/`APP_PRIVATE_KEY` secrets) — the App is on
+the ruleset bypass list, so its push is accepted where a `GITHUB_TOKEN` push (`GH006`) is not.
+Two consequences of using an App token instead of `GITHUB_TOKEN`: (1) it is **not** covered by
+the recursion guard, so `[skip ci]` on the commit is now *load-bearing*, not just
+belt-and-suspenders — without it the SVG commit would retrigger `hardware-gen.yml` (and a
+render→commit→render loop). (2) `[skip ci]` also suppresses the push-triggered `pages.yml`, so
+the `generate` job explicitly runs `gh workflow run pages.yml --ref main` (only when SVGs
+actually changed, and using the App token's `actions:write`) to ship them. Net effect on a
+standard merge: `pages.yml` first deploys the new `standards.json` (briefly referencing a
+not-yet-committed SVG), then this dispatch fires a second deploy ~1–2 min later that includes
+the SVG — self-healing, no manual deploy needed.
+
+### Publish App + ruleset setup
+
+The `generate` job pushes to `main` with a **GitHub App** token so it can bypass the branch
+ruleset (see above). One-time setup; the App belongs to the repo owner (`gcormier`), not an org.
+
+**1. Create the App** at <https://github.com/settings/apps/new>:
+- *Name*: e.g. `gfl-publish-bot` (the committer shows as `gfl-publish-bot[bot]`).
+- *Homepage URL*: the repo URL (any valid URL).
+- *Webhook*: **uncheck Active** (none needed).
+- *Repository permissions*: **Contents: Read and write** (push the SVGs) and **Actions: Read
+  and write** (dispatch `pages.yml`). Leave everything else at *No access* — notably **not**
+  Workflows: write, since the bot only ever commits `hardware-gen/output/*.svg`, never
+  `.github/workflows/**`.
+- *Where can this App be installed?*: **Only on this account.**
+- Create → note the **App ID** → **Generate a private key** (downloads a `.pem`).
+- **Install App** (left sidebar) → install on **`gcormier/gfl` only**.
+
+**2. Store the secrets** (repo secrets, from the repo root):
+```bash
+gh secret set APP_ID --body "<the-app-id>"
+gh secret set APP_PRIVATE_KEY < /path/to/downloaded.private-key.pem   # then delete the .pem
+```
+
+**3. Protect `main` with a ruleset that bypasses the App** (replaces classic protection).
+`<APP_ID>` is the App ID from step 1 — for `Integration` bypass actors the `actor_id` *is* the
+App ID:
+```bash
+gh api repos/gcormier/gfl/rulesets --method POST --input - <<EOF
+{ "name": "main", "target": "branch", "enforcement": "active",
+  "bypass_actors": [ { "actor_id": <APP_ID>, "actor_type": "Integration", "bypass_mode": "always" } ],
+  "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    { "type": "required_status_checks",
+      "parameters": { "strict_required_status_checks_policy": true,
+        "required_status_checks": [
+          { "context": "code-checks gate" }, { "context": "hardware-gen gate" } ] } } ] }
+EOF
+# Then remove the old classic protection so it doesn't double-enforce (and re-block the bot):
+gh api repos/gcormier/gfl/branches/main/protection --method DELETE
+```
+
+**Rotation / changes**: the App private key has no forced expiry (rotate by generating a new
+key and re-running `gh secret set APP_PRIVATE_KEY`). If you rename/recreate the App, update the
+`bypass_actors[].actor_id` in the ruleset to the new App ID. Verify bypass with
+`gh api repos/gcormier/gfl/rulesets/<id> --jq '.bypass_actors'`.
 
