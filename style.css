@@ -362,6 +362,15 @@ select.form-input {
   margin-top: 4px;
 }
 
+.community-icons-list {
+  border: 1px solid var(--rule);
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--surface);
+  margin-top: 4px;
+  padding: 4px;
+}
+
 .search-item {
   padding: 8px 10px;
   cursor: pointer;

@@ -24,7 +24,7 @@
       <code id="appVersion" class="version-pill"></code>
       <code id="libVersion" class="version-pill"></code>
       <span class="topbar-spacer"></span>
-      <a href="contribute.html" class="gh-link">Contribute an image →</a>
+      <a href="contribute.html" class="gh-link">Contribute to the Gallery →</a>
       <a href="https://github.com/gcormier/gfl" class="gh-link" target="_blank" rel="noopener">github.com/gcormier/gfl ↗<span id="ghStars"></span></a>
       <a href="https://www.paypal.me/gcormier" class="gh-link donate-link" target="_blank" rel="noopener">Donate ♥</a>
     </div>
@@ -212,7 +212,7 @@
           <div class="seg-ctrl" id="imageSourceSeg" role="radiogroup" aria-label="Image source">
             <button class="seg-btn seg-sm seg-active" data-value="drawing" role="radio" aria-checked="true">Drawing</button>
             <button class="seg-btn seg-sm"             data-value="mdi"     role="radio" aria-checked="false">MDI</button>
-            <button class="seg-btn seg-sm"             data-value="custom"  role="radio" aria-checked="false">Custom</button>
+            <button class="seg-btn seg-sm"             data-value="custom"  role="radio" aria-checked="false">Gallery</button>
             <button class="seg-btn seg-sm"             data-value="none"    role="radio" aria-checked="false">None</button>
           </div>
           <label class="upload-svg-label">
@@ -245,14 +245,14 @@
           </div>
         </div>
 
-        <!-- Custom icon picker -->
+        <!-- Gallery (community) icon picker -->
         <div id="customPickerGroup" hidden>
-          <div class="contribute-link">
-            <a href="contribute.html" target="_blank" rel="noopener">Create or contribute a custom image →</a>
-          </div>
           <div class="search-container">
-            <input type="text" id="customIconSearch" class="form-input" placeholder="Search custom icons…" autocomplete="off" />
-            <div class="search-results icon-search-results" id="customIconSearchResults" hidden></div>
+            <input type="text" id="customIconSearch" class="form-input" placeholder="Filter gallery icons…" autocomplete="off" />
+          </div>
+          <div class="community-icons-list" id="customIconsList"></div>
+          <div class="contribute-link">
+            <a href="contribute.html" target="_blank" rel="noopener">Contribute to the Gallery →</a>
           </div>
           <div id="selectedCustomIconDisplay" class="selected-standard" hidden>
             <canvas id="customIconPreviewCanvas" width="36" height="36" class="standard-thumb"></canvas>

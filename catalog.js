@@ -362,14 +362,13 @@ async function onSvgUpload(e) {
   scheduleRender();
   e.target.value = '';
 }
-// ─── Custom Icon Picker ───────────────────────────────────────────────────────
+// ─── Gallery (Community) Icon Picker ─────────────────────────────────────────
 
 async function loadCustomIcons() {
   if (customIconsMeta) return customIconsMeta;
   try {
     const res = await fetch(assetUrl('custom-icons.json'));
     const entries = await res.json();
-    // Fetch each SVG file and extract the path d attribute
     customIconsMeta = await Promise.all(entries.map(async icon => {
       if (icon.path) return icon;           // legacy inline path still works
       if (!icon.file) return icon;
@@ -387,53 +386,51 @@ async function loadCustomIcons() {
   return customIconsMeta;
 }
 
-async function onCustomIconSearch(e) {
-  const q = e.target.value.trim().toLowerCase();
-  const results = document.getElementById('customIconSearchResults');
-
-  await loadCustomIcons();
-
-  if (q.length < 1) {
-    results.hidden = true;
-    return;
-  }
-
-  const matches = customIconsMeta.filter(icon =>
+function renderGalleryList(filter) {
+  const list = document.getElementById('customIconsList');
+  const q = (filter || '').trim().toLowerCase();
+  const icons = q.length === 0 ? customIconsMeta : customIconsMeta.filter(icon =>
     icon.name.toLowerCase().includes(q) ||
     icon.tags?.some(t => t.toLowerCase().includes(q))
-  ).slice(0, 36);
+  );
 
-  results.innerHTML = '';
-  if (matches.length === 0) {
-    results.innerHTML = '<div class="search-no-results">No custom icons found</div>';
-  } else {
-    const grid = document.createElement('div');
-    grid.className = 'icon-grid';
-    matches.forEach(icon => {
-      const item = document.createElement('div');
-      item.className = 'icon-grid-item';
-      item.title = icon.name;
-      const cv = document.createElement('canvas');
-      cv.width = 28; cv.height = 28;
-      const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#000';
-      ctx.setTransform(28 / 24, 0, 0, 28 / 24, 0, 0);
-      try { ctx.fill(new Path2D(icon.path)); } catch { /* bad path */ }
-      ctx.resetTransform();
-      const label = document.createElement('span');
-      label.textContent = icon.name;
-      item.append(cv, label);
-      item.addEventListener('click', () => selectCustomIcon(icon));
-      grid.appendChild(item);
-    });
-    results.appendChild(grid);
+  list.innerHTML = '';
+  if (!icons || icons.length === 0) {
+    list.innerHTML = '<div class="search-no-results">No gallery icons found</div>';
+    return;
   }
-  results.hidden = false;
+  const grid = document.createElement('div');
+  grid.className = 'icon-grid';
+  icons.forEach(icon => {
+    const item = document.createElement('div');
+    item.className = 'icon-grid-item';
+    item.title = icon.name;
+    const cv = document.createElement('canvas');
+    cv.width = 28; cv.height = 28;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.setTransform(28 / 24, 0, 0, 28 / 24, 0, 0);
+    try { ctx.fill(new Path2D(icon.path)); } catch { /* bad path */ }
+    ctx.resetTransform();
+    const label = document.createElement('span');
+    label.textContent = icon.name;
+    item.append(cv, label);
+    item.addEventListener('click', () => selectCustomIcon(icon));
+    grid.appendChild(item);
+  });
+  list.appendChild(grid);
+}
+
+async function initGalleryPicker() {
+  await loadCustomIcons();
+  renderGalleryList(document.getElementById('customIconSearch').value);
+}
+
+function onCustomIconSearch(e) {
+  renderGalleryList(e.target.value);
 }
 
 function selectCustomIcon(icon) {
-  document.getElementById('customIconSearch').value = '';
-  document.getElementById('customIconSearchResults').hidden = true;
   selectedCustomIcon = { id: icon.id, name: icon.name, path: icon.path };
   showSelectedCustomIcon();
   scheduleRender();

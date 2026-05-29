@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Contribute a Custom Image — Gridfinity Label Generator</title>
+  <title>Contribute to the Gallery — Gridfinity Label Generator</title>
   <link rel="icon" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -40,8 +40,8 @@
 
   <!-- ── Page Intro ─────────────────────────────────────────────────────── -->
   <div class="contrib-page-intro">
-    <h1 class="contrib-page-title">Contribute a Custom Image</h1>
-    <p class="contrib-page-subtitle">Trace an image or design a shape with JSCad, then submit it as a custom icon — it joins the shared library for everyone to use in the label editor. No local tooling required.</p>
+    <h1 class="contrib-page-title">Contribute to the Gallery</h1>
+    <p class="contrib-page-subtitle">Trace an image or design a shape with JSCad, then submit it as an icon — it joins the shared gallery for everyone to use in the label editor. No local tooling required.</p>
   </div>
 
   <!-- ── Main Layout ────────────────────────────────────────────────────── -->
@@ -101,7 +101,7 @@
         <div class="jscad-toolbar">
           <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
           <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
-          <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Submit Custom Image…</button>
+          <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Contribute to Gallery…</button>
         </div>
         <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
         <div id="jscadStatus" class="jscad-status"></div>
@@ -116,11 +116,11 @@
             <strong>▶ Run</strong> to preview. <code>main()</code> must return a single 2D shape.
           </li>
           <li>
-            <strong>Submit a PR</strong> — click <strong>Submit Custom Image…</strong>, give it a name,
+            <strong>Submit a PR</strong> — click <strong>Contribute to Gallery…</strong>, give it a name,
             keywords, and a filename id (e.g. <code>hex-wrench</code>), then <strong>Open on GitHub →</strong>.
             GitHub pre-fills a single SVG file under <code>images/custom/</code> and walks you through forking
             &amp; opening a pull request — no CLI or authentication needed. Once merged, it appears for everyone
-            under <strong>Icon → Custom</strong>.
+            under <strong>Icon → Gallery</strong>.
           </li>
           <li>
             <strong>Use it now</strong> — while your PR is in review, click <strong>Export SVG ↓</strong>
@@ -142,7 +142,7 @@
 <div id="contribOverlay" class="shortcuts-overlay" hidden>
   <div class="shortcuts-dialog contrib-dialog">
     <div class="shortcuts-hdr">
-      <span class="shortcuts-title" id="contribModalTitle">Submit Custom Image as PR</span>
+      <span class="shortcuts-title" id="contribModalTitle">Contribute to Gallery as PR</span>
       <button type="button" onclick="closeContribModal()" class="shortcuts-close">×</button>
     </div>
 
@@ -171,7 +171,7 @@
     <p class="contrib-step-text hint-text" id="contribHintNew">
       Clicking <b>Open on GitHub</b> opens a new tab on github.com with the SVG file
       pre-filled. GitHub will offer to fork the repo and open a pull request — no
-      authentication required here. Once merged it appears under <b>Icon → Custom</b>
+      authentication required here. Once merged it appears under <b>Icon → Gallery</b>
       for everyone.
     </p>
 

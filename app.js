@@ -1,7 +1,7 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '1.9.9';
+const APP_VERSION = '2.0.0';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')
@@ -539,6 +539,7 @@ function onImageSourceChange() {
   const src = getImageSource();
   document.getElementById('mdiPickerGroup').hidden    = src !== 'mdi';
   document.getElementById('customPickerGroup').hidden = src !== 'custom';
+  if (src === 'custom') initGalleryPicker();
   scheduleRender();
 }
 
