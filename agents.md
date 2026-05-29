@@ -130,6 +130,11 @@ root to produce a working-tree `standards.json` (git-ignored), then load the app
 CI (`hardware-gen.yml`) runs the generators on every push/PR touching `hardware-gen/config/`,
 `images/custom/`, or the generators — as a **validation gate** (they exit non-zero on
 malformed YAML or invalid SVG metadata). There is no committed JSON to diff against.
+`generate_standards_json.py` additionally cross-checks the merged set of standards across
+all config files and fails on: duplicate `id`s, a missing/empty `designations` list, an
+`image` that isn't an absolute web path or whose file doesn't exist on disk, or duplicate
+render `name`s (they become output filenames). This is what makes "build but don't list"
+(or a renamed-but-not-updated image) impossible to merge.
 
 Standards render in the app from each entry's committed PNG `image`.
 
