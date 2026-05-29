@@ -78,9 +78,10 @@ Two principles drive the direction of this workflow. Weigh changes against them:
 > file back to `main` would make it a merge surface — every concurrent PR that
 > regenerated it would conflict and need a rebase + re-generate. Instead they are
 > **built at deploy time** by `pages.yml`, so contributors only ever edit the source.
-> Heavy CAD-rendered binaries (the PNG `image`s under `images/standards/`) remain
-> committed artifacts — low conflict risk, expensive to build — until the toolchain
-> (OpenSCAD goal) is light enough to render them at deploy too.
+> The CAD-rendered geometry (the SVG `image`s under `hardware-gen/output/`) is the one
+> exception that stays committed — it's expensive to build (FreeCAD), so the
+> `hardware-gen.yml` bot renders and commits it rather than rebuilding on every deploy.
+> This holds until the toolchain (OpenSCAD goal) is light enough to render at deploy too.
 
 `standards.json` (root) is a **generated, git-ignored artifact** — never edit it by
 hand and never commit it.
@@ -101,7 +102,7 @@ standards:
     designations:
       - { system: ISO, code: "4032" }
       - { system: DIN, code: "934" }
-    image: /images/standards/iso_4032.png
+    image: /hardware-gen/output/M8_HexNut_top.svg
     renders:                    # optional — omit/empty for catalog-only standards
       - name: M8_HexNut
         size: M8                # length too, for items that have one
@@ -120,20 +121,26 @@ Key rules:
   the list, builds no geometry).
 
 To add or modify a standard:
-1. Edit the matching `hardware-gen/config/*.yaml` (and add its PNG under `images/standards/`).
-2. Commit **only** the YAML and the image — open a PR. Do **not** generate or commit `standards.json`.
-3. On merge to `main`, `pages.yml` regenerates `standards.json` into the deploy and the standard goes live.
+1. Edit the matching `hardware-gen/config/*.yaml`. Point each render's `image` at the SVG
+   the pipeline will produce (e.g. `/hardware-gen/output/M8_HexNut_top.svg`) — you do
+   **not** render it by hand.
+2. Commit **only** the YAML — open a PR. Do **not** generate or commit `standards.json`
+   or the SVGs.
+3. On merge to `main`, `hardware-gen.yml` renders the geometry and commits the
+   `hardware-gen/output/*.svg`, then dispatches `pages.yml`, which regenerates
+   `standards.json` into the deploy. The standard goes live.
 
-To preview locally, run `python hardware-gen/generate_standards_json.py` from the repo
-root to produce a working-tree `standards.json` (git-ignored), then load the app.
+To preview locally, run `uv run python generate_standards_json.py` from the `hardware-gen/`
+directory to produce a working-tree `standards.json` (git-ignored), then load the app.
 
 CI (`hardware-gen.yml`) runs the generators on every push/PR touching `hardware-gen/config/`,
 `images/custom/`, or the generators — as a **validation gate** (they exit non-zero on
 malformed YAML or invalid SVG metadata). There is no committed JSON to diff against.
 `generate_standards_json.py` additionally cross-checks the merged set of standards across
 all config files and fails on: duplicate `id`s, a missing/empty `designations` list, an
-`image` that isn't an absolute web path or whose file doesn't exist on disk, or duplicate
-render `name`s (they become output filenames). This is what makes "build but don't list"
+`image` that isn't an absolute web path (or, for paths outside `/hardware-gen/output/`,
+whose file doesn't exist on disk — pipeline-rendered SVGs are exempt, since CI generates
+them), or duplicate render `name`s (they become output filenames). This is what makes "build but don't list"
 (or a renamed-but-not-updated image) impossible to merge.
 
 Standards render in the app from each entry's committed SVG `image` (a view
@@ -156,7 +163,7 @@ To add or modify a custom image:
 2. Commit **only** the SVG — open a PR. Do **not** generate or commit `custom-icons.json`.
 3. On merge to `main`, `pages.yml` regenerates `custom-icons.json` into the deploy.
 
-To preview locally, run `python hardware-gen/generate_custom_icons.py` from the repo root.
+To preview locally, run `uv run python generate_custom_icons.py` from the `hardware-gen/` directory.
 
 The generator validates each SVG (non-empty `<title>`, at least one `<desc>`
 keyword, at least one `<path d>`, conforming filename) and fails CI otherwise — it
@@ -182,7 +189,7 @@ Publishes the static site (the entire repo root) to GitHub Pages.
 
 Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardware artifacts, committing the resulting SVGs back to the repo so Pages can serve them.
 
-- **Triggers**: push **and** pull_request touching `hardware-gen/config/**`, `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs).
+- **Triggers**: push **and** pull_request touching `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`, `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs).
 - **Concurrency**: group `hardware-gen-${{ github.ref }}`, `cancel-in-progress: true` — one run per branch to avoid clobbering the artifact cache; other branches run independently.
 - **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`.
 

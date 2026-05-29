@@ -10,6 +10,7 @@ A browser-based label generator for [Gridfinity](https://www.youtube.com/watch?v
 
 - Search a catalog of **DIN / ISO fastener standards** with automatic cross-references
 - Render technical drawings, MDI icons, or custom SVG icons on the label
+- Switch between generated ISO / top / side views for hardware standards
 - Generate images as code using [FreeCAD Fasteners Workbench](https://wiki.freecad.org/Fasteners_Workbench)
 - Freeform text mode for general-purpose labels
 - Optional QR code with a link back to the standard
@@ -102,9 +103,9 @@ that file). To add a new icon:
 2. Open a PR with **just the SVG**. On merge, the deploy regenerates `custom-icons.json`
    and your icon goes live — no JSON edit needed.
 
-> **Tip:** To preview locally, run `python hardware-gen/generate_custom_icons.py` from
-> the repo root to build a working-tree `custom-icons.json`, then load the app and select
-> your icon from the Custom icon source.
+> **Tip:** To preview locally, run `uv run python generate_custom_icons.py` from the
+> `hardware-gen/` directory to build a working-tree `custom-icons.json`, then load the app
+> and select your icon from the Custom icon source.
 
 #### SVG Icon Guidelines
 
