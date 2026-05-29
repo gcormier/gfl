@@ -77,10 +77,10 @@ Fasteners workbench.
 
 To add or change a standard:
 
-1. Edit the relevant config under
-   [`hardware-gen/config/`](hardware-gen/config/) — `standards_meta.yaml` for the
-   web catalog metadata, plus the fastener configs (`bolts_screws.yaml`,
-   `nuts.yaml`, `washers.yaml`, `misc.yaml`) for geometry.
+1. Edit the relevant config file under
+   [`hardware-gen/config/`](hardware-gen/config/) (`bolts_screws.yaml`,
+   `nuts.yaml`, `washers.yaml`, or `misc.yaml`). Each file is the single
+   source of truth for both the catalog metadata and the geometry render recipe.
 2. Run the generator (see [`hardware-gen/README.md`](hardware-gen/README.md) for
    the FreeCAD setup):
 

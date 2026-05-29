@@ -61,12 +61,14 @@ def _validate(collected: list[tuple[StandardSpec, Path]]) -> None:
         if not std.designations:
             errors.append(f"{where}: at least one designation is required")
 
-        if not std.image.startswith("/"):
-            errors.append(
-                f"{where}: image must be an absolute web path (got '{std.image}')"
-            )
-        elif not (REPO_ROOT / std.image.lstrip("/")).is_file():
-            errors.append(f"{where}: image file not found: {std.image}")
+        if std.image is not None:
+            if not std.image.startswith("/"):
+                errors.append(
+                    f"{where}: image must be an absolute web path (got '{std.image}')"
+                )
+            elif not std.image.startswith("/hardware-gen/output/") and \
+                    not (REPO_ROOT / std.image.lstrip("/")).is_file():
+                errors.append(f"{where}: image file not found: {std.image}")
 
         for render in std.renders:
             if render.name in seen_render_names:
@@ -86,8 +88,9 @@ def _validate(collected: list[tuple[StandardSpec, Path]]) -> None:
 
 
 def _render(collected: list[tuple[StandardSpec, Path]]) -> str:
-    output: list[dict[str, Any]] = [
-        {
+    output: list[dict[str, Any]] = []
+    for std, _ in collected:
+        entry: dict[str, Any] = {
             "id": std.id,
             "primarySystem": std.primary_system,
             "description": std.description,
@@ -95,10 +98,10 @@ def _render(collected: list[tuple[StandardSpec, Path]]) -> str:
                 {"system": d.system, "code": d.code} for d in std.designations
             ],
             "hardwareType": std.hardware_type,
-            "image": std.image,
         }
-        for std, _ in collected
-    ]
+        if std.image is not None:
+            entry["image"] = std.image
+        output.append(entry)
     return json.dumps(output, indent=2, ensure_ascii=False) + "\n"
 
 

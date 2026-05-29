@@ -12,7 +12,7 @@ standards:
     designations:
       - { system: ISO, code: "4762" }
       - { system: DIN, code: "912" }
-    image: /images/standards/iso_4762.png
+    image: /hardware-gen/output/SocketCap_iso.svg
     renders:
       - name: SocketCap
         size: M4
@@ -27,7 +27,7 @@ standards:
     designations:
       - { system: ISO, code: "7380-1" }
       - { system: DIN, code: "9427" }
-    image: /images/standards/iso_7380_1.png
+    image: /hardware-gen/output/ButtonHead_iso.svg
     renders:
       - name: ButtonHead
         size: M4
@@ -41,7 +41,7 @@ standards:
     description: "Fasteners - Button head screws with reduced loadability - Part 2: Hexagon socket button head screws with flange (ISO 7380-2:2022)"
     designations:
       - { system: ISO, code: "7380-2" }
-    image: /images/standards/iso_7380_2.png
+    image: /hardware-gen/output/ButtonHeadFlange_iso.svg
     renders:
       - name: ButtonHeadFlange
         size: M4
@@ -57,4 +57,3 @@ standards:
     designations:
       - { system: ISO, code: "10642" }
       - { system: DIN, code: "7991" }
-    image: /images/standards/iso_10642.png

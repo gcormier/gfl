@@ -99,7 +99,7 @@ class StandardSpec:
     description: str
     hardware_type: str
     designations: list[Designation]
-    image: str
+    image: str | None
     renders: list[RenderSpec] = field(default_factory=list)
 
     @classmethod
@@ -117,7 +117,7 @@ class StandardSpec:
             description=data["description"],
             hardware_type=hardware_type,
             designations=[Designation.from_dict(d) for d in data["designations"]],
-            image=data["image"],
+            image=data.get("image"),
             renders=[RenderSpec.from_dict(r) for r in data.get("renders", [])],
         )
 

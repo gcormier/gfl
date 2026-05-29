@@ -7,7 +7,7 @@ standards:
     designations:
       - { system: ISO, code: "7089" }
       - { system: DIN, code: "125" }
-    image: /images/standards/iso_7089.png
+    image: /hardware-gen/output/M8_PlainWasher_top.svg
     renders:
       - name: M8_PlainWasher
         size: M8
