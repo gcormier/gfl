@@ -11,9 +11,13 @@ own ``FSFastenerTypeDB`` (the exact registry FreeCAD validates ``.Type``
 against) into the committed snapshot ``pipeline/fastener_types.json``.
 
 ``resolve_standard`` only normalises case/whitespace. ``validate_standard``
-checks membership against that snapshot, so a bad name (e.g. ``ISO7980``, which
-the workbench doesn't ship) fails at the fast no-FreeCAD validation gate with a
-"did you mean" hint — instead of as an opaque enumeration error mid-render. The
+checks membership against that snapshot, so an unrenderable name (e.g.
+``ISO7980``, which the workbench doesn't ship) fails at the fast no-FreeCAD
+validation gate with actionable hints — instead of as an opaque enumeration
+error mid-render. The error distinguishes between a standard that is real but
+unimplemented by the workbench (most common: drop ``renders:`` to go
+catalog-only, or contribute a custom image) versus a likely typo (the "did you
+mean" hint). The
 ``generate`` CI job additionally rechecks the snapshot live against the
 installed workbench (``dump_fastener_types.py`` ``mode=check``) so the snapshot
 can't silently go stale after a FreeCAD/workbench upgrade.
@@ -84,11 +88,19 @@ def validate_standard(name: str) -> None:
     if name in known:
         return
     suggestion = difflib.get_close_matches(name, known, n=1, cutoff=0.6)
-    hint = f" Did you mean '{suggestion[0]}'?" if suggestion else ""
+    workbench_hint = (
+        f"\n  → If you intended a different workbench standard, "
+        f"did you mean '{suggestion[0]}'? (closest match in workbench registry)"
+        if suggestion else ""
+    )
     raise UnknownStandardError(
-        f"'{name}' is not a FreeCAD Fasteners workbench standard.{hint}\n"
-        f"Valid names are derived from the workbench into {_SNAPSHOT_PATH.name}. "
-        "If a render needs a part the workbench doesn't implement, drop the "
-        "render and keep the entry catalog-only; if you upgraded FreeCAD, "
-        "regenerate the snapshot with dump_fastener_types.py."
+        f"'{name}' is a valid standard, but the FreeCAD Fasteners workbench does "
+        f"not implement it — rendering is not possible.\n"
+        f"  → To keep it in the catalog without a render, remove the `renders:` "
+        f"block from this entry.\n"
+        f"  → If you want a visual anyway, contribute a custom SVG via "
+        f"contribute.html and set `image:` on the entry manually."
+        f"{workbench_hint}\n"
+        f"  → If you upgraded FreeCAD/Fasteners, regenerate the snapshot: "
+        f"freecad_scripts/dump_fastener_types.py mode=dump"
     )
