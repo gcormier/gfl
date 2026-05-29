@@ -176,6 +176,12 @@ jobs:
           HW_GEN_PARAMS: '{"mode":"check","path":"pipeline/fastener_types.json"}'
         run: $FREECADCMD freecad_scripts/dump_fastener_types.py
 
+      - name: Recheck fastener-capabilities snapshot against the live workbench
+        env:
+          QT_QPA_PLATFORM: offscreen
+          HW_GEN_PARAMS: '{"mode":"check","path":"pipeline/fastener_capabilities.json"}'
+        run: $FREECADCMD freecad_scripts/dump_fastener_capabilities.py
+
       - name: Generate hardware artifacts
         env:
           QT_QPA_PLATFORM: offscreen
