@@ -17,6 +17,8 @@ standards:
     description: "Spring lock washers (split lock washers) for hexagon head screws"
     designations:
       - { system: DIN, code: "127" }
+    renders:
+        views: [iso, top]
 
   # Catalog-only — bent/saddle-type spring lock washer; no ISO equivalent.
   - id: din128a
