@@ -30,7 +30,11 @@ from pipeline.engine_base import CADEngine, get_engine
 # no other significance.
 from pipeline.freecad_engine import FreeCADEngine  # noqa: F401
 from pipeline.models import FastenerSpec, HardwareConfig
-from pipeline.standards import resolve_standard
+from pipeline.standards import (
+    UnknownStandardError,
+    resolve_standard,
+    validate_standard,
+)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -114,14 +118,14 @@ def _discover_configs(config_dir: Path) -> list[Path]:
 
 def _resolve_spec_standards(spec: FastenerSpec) -> FastenerSpec:
     """
-    Apply ISO-first policy to *spec* in-place and return it.
+    Normalise *spec.standard* to its canonical workbench name and validate it.
 
-    The ``standard`` field is replaced with the canonical ISO identifier.
+    Raises :class:`UnknownStandardError` if the resolved name is not a FreeCAD
+    Fasteners workbench standard. Only renders reach here, so catalog-only
+    entries are never validated against the workbench.
     """
-    resolved = resolve_standard(spec.standard)
-    if resolved != spec.standard:
-        # The standard was remapped (warning already logged by resolve_standard).
-        spec.standard = resolved
+    spec.standard = resolve_standard(spec.standard)
+    validate_standard(spec.standard)
     return spec
 
 
@@ -232,8 +236,13 @@ def main() -> int:
             continue
 
         for spec in specs:
-            spec = _resolve_spec_standards(spec)
             total += 1
+            try:
+                spec = _resolve_spec_standards(spec)
+            except UnknownStandardError as exc:
+                log.error("── %s ── %s", spec.name, exc)
+                failed += 1
+                continue
             ok = _run_pipeline(spec, engine, dry_run=args.dry_run, log=log)
             if ok:
                 passed += 1

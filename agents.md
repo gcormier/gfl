@@ -117,11 +117,20 @@ standards:
 
 Key rules:
 - **`id` ⇒ FreeCAD name *and* render filename.** Geometry is built from `id.upper()`
-  (via `resolve_standard`), so the id must equal the FreeCAD Fasteners workbench name —
-  e.g. `iso7380-1`, **not** `iso7380`. Renders inherit the standard from their parent
-  `id`; they do **not** repeat it. A render's output filename stem also **defaults to the
-  `id`** (e.g. `iso4032_top.svg`); set an optional `name:` on a render only to disambiguate
-  when a standard has more than one render.
+  (via `resolve_standard`, which only normalises case/whitespace — there is no DIN→ISO
+  remap), so the id must equal the FreeCAD Fasteners workbench name *exactly* —
+  e.g. `iso7380-1`, **not** `iso7380`; `asmeb18.2.1.6`, **not** `asmeb18.2.1`. For any
+  standard that **renders**, the id is validated against the workbench's own registry —
+  the committed `pipeline/fastener_types.json` snapshot, which is *generated from the
+  workbench* by `freecad_scripts/dump_fastener_types.py` (it mirrors the `.Type`
+  enumeration FreeCAD itself validates against). An id that isn't a workbench name fails
+  the dry-run gate with a "did you mean" hint, instead of as an opaque error mid-render.
+  **Catalog-only standards are exempt** (they never reach the workbench), so they may use
+  real-world identifiers the Fasteners workbench doesn't implement (e.g. `din2093`
+  Belleville washers, `din127` split-lock washers). Renders inherit the standard from
+  their parent `id`; they do **not** repeat it. A render's output filename stem also
+  **defaults to the `id`** (e.g. `iso4032_top.svg`); set an optional `name:` on a render
+  only to disambiguate when a standard has more than one render.
 - **`image` is inferred**, not authored — it's the first render's first view
   (`/hardware-gen/output/<name>_<firstview>.svg`). Set an explicit `image:` on a standard
   only as an override (e.g. a custom catalog-only thumbnail).
@@ -247,8 +256,8 @@ Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardw
 - **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`.
 
 1. **`lint`** (no FreeCAD): `uv sync --dev`, then `ruff check .` and `mypy generate.py pipeline/`. Working dir `hardware-gen`.
-2. **`dry-run`** (no FreeCAD): parses/validates YAML via `generate.py --dry-run`, then runs `generate_standards_json.py` and `generate_custom_icons.py` (no `--check`) as a **validation gate** — they parse the source YAML and validate every SVG's metadata, failing CI on malformed input. They no longer diff against a committed JSON (there isn't one — it's generated at deploy time).
-3. **`generate`** (requires FreeCAD, `contents: write` + `actions: write`): downloads & extracts the FreeCAD 1.1.1 AppImage to `/opt/freecad` (cached by URL), installs the Fasteners workbench (cached weekly via a `%Y-%U` key), runs `generate.py` headless (`QT_QPA_PLATFORM=offscreen`, `FREECADCMD` pointed at the extracted binary). Uploads STEP and SVG artifacts (30-day retention), then **commits the regenerated `hardware-gen/output/*.svg` back to the repo** as `github-actions[bot]` with `[skip ci]` and pushes. When SVGs changed, it then **dispatches `pages.yml`** (`gh workflow run`) so the new geometry ships to Pages.
+2. **`dry-run`** (no FreeCAD): parses/validates YAML via `generate.py --dry-run`, then runs `generate_standards_json.py` and `generate_custom_icons.py` (no `--check`) as a **validation gate** — they parse the source YAML and validate every SVG's metadata, failing CI on malformed input. `--dry-run` also **validates every render's `id` against the committed `pipeline/fastener_types.json` snapshot** (the workbench registry), so a non-existent standard name (e.g. `iso7980`) fails *here*, with no FreeCAD, rather than as an opaque enumeration error mid-render. They no longer diff against a committed JSON for the catalogs (there isn't one — it's generated at deploy time).
+3. **`generate`** (requires FreeCAD, `contents: write` + `actions: write`): downloads & extracts the FreeCAD 1.1.1 AppImage to `/opt/freecad` (cached by URL), installs the Fasteners workbench (cached weekly via a `%Y-%U` key). It first **rechecks `pipeline/fastener_types.json` live against the installed workbench** (`dump_fastener_types.py` `mode=check`) so the snapshot can't silently go stale after a FreeCAD/Fasteners upgrade, then runs `generate.py` headless (`QT_QPA_PLATFORM=offscreen`, `FREECADCMD` pointed at the extracted binary). Uploads STEP and SVG artifacts (30-day retention), then **commits the regenerated `hardware-gen/output/*.svg` back to the repo** as `github-actions[bot]` with `[skip ci]` and pushes. When SVGs changed, it then **dispatches `pages.yml`** (`gh workflow run`) so the new geometry ships to Pages.
 
 **Caching notes**: the FreeCAD AppImage cache key is the download URL — bump `FREECAD_APPIMAGE_URL` to upgrade FreeCAD and the cache invalidates automatically. The Fasteners workbench cache rotates weekly so upstream fixes get picked up without manual cache busting.
 

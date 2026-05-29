@@ -41,3 +41,13 @@ standards:
     designations:
       - { system: ISO, code: "10642" }
       - { system: DIN, code: "7991" }
+
+  # id uppercased = ASMEB18.2.1.6 ("UNC Hex head screws"); .1 is square bolts.
+  - id: asmeb18.2.1.6
+    description: "Hex head screws (UNC) — covers 1/4-20 and other UNC sizes"
+    designations:
+      - { system: ASME, code: "B18.2.1" }
+    renders:
+      - size: 1/4in
+        length: 1
+        views: [iso, side]
