@@ -13,10 +13,13 @@ Expected ``HW_GEN_PARAMS`` JSON keys:
     view       : str  — one of "top", "side", "front", "iso"
     out_path   : str  — absolute path for the output SVG
 
-View direction convention (right-hand, Z-up):
-    top   → looking down   → direction (0,  0, -1),  up (0, 1, 0)
-    front → looking forward→ direction (0, -1,  0),  up (0, 0, 1)
-    side  → looking right  → direction (1,  0,  0),  up (0, 0, 1)
+View direction convention (right-hand, Z-up).
+NB: TechDraw's ``Direction`` is the vector pointing FROM the object TOWARD the
+viewer (the out-of-page normal), not the direction of gaze.  So a top view —
+looking down at the +Z head face — uses direction (0, 0, 1), not (0, 0, -1).
+    top   → viewer above   → direction (0,  0,  1),  up (0, 1, 0)
+    front → viewer in front→ direction (0, -1,  0),  up (0, 0, 1)
+    side  → viewer at right → direction (1,  0,  0),  up (0, 0, 1)
     iso   → isometric      → direction (1, -1,  1).normalize(), up (0, 0, 1)
 
 Exit codes:
@@ -86,7 +89,7 @@ def _iso_dir() -> FreeCAD.Vector:
 
 _VIEW_DIRECTIONS: dict[str, tuple[FreeCAD.Vector, FreeCAD.Vector]] = {
     #            direction vector               up vector
-    "top":   (FreeCAD.Vector(0,  0, -1), FreeCAD.Vector(0, 1, 0)),
+    "top":   (FreeCAD.Vector(0,  0,  1), FreeCAD.Vector(0, 1, 0)),
     "front": (FreeCAD.Vector(0, -1,  0), FreeCAD.Vector(0, 0, 1)),
     "side":  (FreeCAD.Vector(1,  0,  0), FreeCAD.Vector(0, 0, 1)),
     "iso":   (_iso_dir(),                FreeCAD.Vector(0, 0, 1)),
