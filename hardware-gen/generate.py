@@ -464,3 +464,7 @@ def main() -> int:
 
     # generate (default)
     return _cmd_generate(args, log)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
