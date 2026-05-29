@@ -144,7 +144,6 @@ log.info("Loaded %d shape(s) from model.", len(shapes))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.svg_crop import compute_bbox  # noqa: E402
 
-
 # Visual line weight as a fraction of the larger viewBox dimension, so every
 # standard renders with the same apparent stroke regardless of part size.
 # TechDraw emits a fixed absolute stroke-width (≈0.7mm) that looks chunky on

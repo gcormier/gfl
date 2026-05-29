@@ -1,8 +1,8 @@
 """
 Tight bounding-box computation and re-cropping for TechDraw SVG output.
 
-Pure stdlib (``re`` only) so it can be imported both from the normal venv and
-from inside ``freecadcmd``'s bundled interpreter (stage2_2d.py).
+Pure stdlib so it can be imported both from the normal venv and from inside
+``freecadcmd``'s bundled interpreter (stage2_2d.py).
 
 The TechDraw projection produces geometry whose true extent is small, but a
 naive "treat every number in d= as x/y" parser mistakes arc parameters
@@ -13,6 +13,7 @@ This module parses path commands properly so the crop is tight.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 
 # Matches a path command letter OR a number (incl. scientific notation).
 _TOKEN_RE = re.compile(r"[MmLlHhVvCcSsQqTtAaZz]|[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
@@ -20,7 +21,7 @@ _TOKEN_RE = re.compile(r"[MmLlHhVvCcSsQqTtAaZz]|[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?"
 _ARGC = {"M": 2, "L": 2, "H": 1, "V": 1, "C": 6, "S": 4, "Q": 4, "T": 2, "A": 7, "Z": 0}
 
 
-def _accumulate_path_points(d: str, add) -> None:
+def _accumulate_path_points(d: str, add: Callable[[float, float], None]) -> None:
     """Parse one path ``d`` string, calling ``add(x, y)`` for every point that
     bounds the geometry (endpoints and Bezier control points, which contain
     their curves)."""
@@ -76,18 +77,30 @@ def _accumulate_path_points(d: str, add) -> None:
         elif c == "C":
             x1, y1, x2, y2, x, y = (nxt() for _ in range(6))
             if rel:
-                x1 += cx; y1 += cy; x2 += cx; y2 += cy; x += cx; y += cy
-            add(x1, y1); add(x2, y2); add(x, y)
+                x1 += cx
+                y1 += cy
+                x2 += cx
+                y2 += cy
+                x += cx
+                y += cy
+            add(x1, y1)
+            add(x2, y2)
+            add(x, y)
             cx, cy = x, y
         elif c == "S" or c == "Q":
             x1, y1, x, y = (nxt() for _ in range(4))
             if rel:
-                x1 += cx; y1 += cy; x += cx; y += cy
-            add(x1, y1); add(x, y)
+                x1 += cx
+                y1 += cy
+                x += cx
+                y += cy
+            add(x1, y1)
+            add(x, y)
             cx, cy = x, y
         elif c == "A":
             # rx ry rotation large-arc-flag sweep-flag x y — only x/y are points.
-            nxt(); nxt(); nxt(); nxt(); nxt()
+            for _ in range(5):
+                nxt()
             x, y = nxt(), nxt()
             if rel:
                 x += cx
@@ -102,7 +115,9 @@ def _attrs(tag: str) -> dict[str, str]:
     return dict(re.findall(r'(\w+)\s*=\s*"([^"]*)"', tag))
 
 
-def compute_bbox(svg_text: str, pad_frac: float = 0.04, pad_min: float = 0.5):
+def compute_bbox(
+    svg_text: str, pad_frac: float = 0.04, pad_min: float = 0.5
+) -> tuple[float, float, float, float]:
     """Return a tight ``(x, y, width, height)`` for all drawable geometry in
     *svg_text*. Padding is a fraction of the larger dimension (min ``pad_min``).
     Falls back to a 200×200 box centred on the origin if nothing parses."""
@@ -151,7 +166,7 @@ def recrop_svg(svg_text: str) -> str:
     bbox of its geometry, leaving the body untouched."""
     x, y, w, h = compute_bbox(svg_text)
 
-    def repl(m: re.Match) -> str:
+    def repl(m: re.Match[str]) -> str:
         head = m.group(0)
         head = re.sub(r'\bwidth\s*=\s*"[^"]*"', f'width="{w:.3f}mm"', head)
         head = re.sub(r'\bheight\s*=\s*"[^"]*"', f'height="{h:.3f}mm"', head)
