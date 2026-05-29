@@ -26,4 +26,4 @@ standards:
       - { system: ASME, code: "B18.2.2" }
     renders:
       - size: 1/4in
-        views: [iso, top]s
+        views: [iso, top]
