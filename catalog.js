@@ -179,6 +179,7 @@ function selectStandard(s) {
   desc.textContent = s.description.slice(0, 100);
 
   if (s.image) {
+    img.onerror = () => { img.hidden = true; };
     img.src = assetUrl(s.image);
     img.hidden = false;
   } else {
