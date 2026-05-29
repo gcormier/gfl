@@ -237,8 +237,12 @@ jobs:
             echo "No SVG changes to commit."
           else
             git commit -m "chore: update generated SVGs [skip ci]"
-            # Push over an explicit PAT URL (overrides the GITHUB_TOKEN creds that
-            # actions/checkout persisted) so the push is attributed to the admin and
+            # Remove the GITHUB_TOKEN extraheader that actions/checkout persisted —
+            # without this git may send it alongside the PAT URL creds, and whichever
+            # credential GitHub honours would be github-actions[bot] rather than the
+            # admin account, losing the enforce_admins bypass.
+            git config --local --unset-all 'http.https://github.com/.extraheader' || true
+            # Push over an explicit PAT URL so the push is attributed to the admin and
             # bypasses branch protection. [skip ci] is load-bearing here: a PAT push
             # is NOT covered by the GITHUB_TOKEN recursion guard, so without it this
             # commit would retrigger hardware-gen (render→commit→render loop).
