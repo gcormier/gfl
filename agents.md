@@ -208,10 +208,17 @@ PR runs `code-checks.yml`, and neither overlaps the other. `pages.yml` and `hard
 carry real deployment logic (publish to Pages / push commits back to `main`) — read this
 before editing either.
 
+**PR-verify vs merge-publish.** `hardware-gen.yml` and `code-checks.yml` trigger on
+`pull_request` (any branch) **and** `push` scoped to **`main` only**. The `main`-only push
+scope is deliberate: a feature-branch push would otherwise double-run alongside the PR's
+`pull_request` event (same path filters, different `github.ref`, so concurrency doesn't
+cancel them). With push scoped to `main`, PRs are covered by `pull_request` and the
+merge-to-`main` push (which has no associated PR) is the single place the publish path runs.
+
 | Workflow | Triggers on (paths) | Purpose |
 |---|---|---|
-| `hardware-gen.yml` | `hardware-gen/{config,freecad_scripts,pipeline}/**`, `generate_custom_icons.py`, `images/custom/**`, `custom-icons.json` | Lint/validate + FreeCAD render of hardware artifacts |
-| `code-checks.yml` | `*.js`, `*.html`, `*.css`, `print-agent/**` | Verify frontend + print-agent PRs |
+| `hardware-gen.yml` | `pull_request` + push-to-`main`, paths: `hardware-gen/{config,freecad_scripts,pipeline}/**`, `generate_custom_icons.py`, `images/custom/**`, `custom-icons.json` | Lint/validate + FreeCAD render of hardware artifacts (commit/deploy on `main` only) |
+| `code-checks.yml` | `pull_request` + push-to-`main`, paths: `*.js`, `*.html`, `*.css`, `print-agent/**` | Verify frontend + print-agent PRs |
 | `pages.yml` | push to `main` (deploy only; PRs don't run it) | Build catalogs + version, deploy to Pages |
 
 ### `pages.yml` — Deploy to GitHub Pages
@@ -231,8 +238,9 @@ Lightweight, fast checks for code PRs. **Carries no deploy logic and pushes noth
 purely a gate. Scoped to code paths and deliberately excludes `hardware-gen/**` so it
 never double-runs against `hardware-gen.yml`.
 
-- **Triggers**: push **and** pull_request touching `*.js`, `*.html`, `*.css`,
-  `print-agent/**`, or the workflow file.
+- **Triggers**: `pull_request` (any branch) **and** push to **`main`** touching `*.js`,
+  `*.html`, `*.css`, `print-agent/**`, or the workflow file. Push is `main`-scoped so a
+  feature-branch push doesn't double-run alongside the PR; the `main` run is a post-merge backstop.
 - **Concurrency**: group `code-checks-${{ github.ref }}`, `cancel-in-progress: true`.
 - **Jobs** (parallel, no FreeCAD, no heavy deps):
   1. **`js`** — `node --check` on every root `*.js`. Parses (doesn't execute) each module,
@@ -251,13 +259,13 @@ never double-runs against `hardware-gen.yml`.
 
 Lints, validates, and (on relevant pushes) regenerates the FreeCAD-derived hardware artifacts, committing the resulting SVGs back to the repo so Pages can serve them.
 
-- **Triggers**: push **and** pull_request touching `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`, `hardware-gen/pipeline/**` (render/crop logic), `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs).
+- **Triggers**: `pull_request` (any branch) **and** push to **`main`** touching `hardware-gen/config/**`, `hardware-gen/freecad_scripts/**`, `hardware-gen/pipeline/**` (render/crop logic), `hardware-gen/generate_custom_icons.py`, `images/custom/**`, `custom-icons.json`, or the workflow file itself; plus `workflow_dispatch` with an optional `config_file` input (empty = process all configs). Push is `main`-scoped so a feature-branch push doesn't double-run alongside the PR.
 - **Concurrency**: group `hardware-gen-${{ github.ref }}`, `cancel-in-progress: true` — one run per branch to avoid clobbering the artifact cache; other branches run independently.
-- **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`.
+- **Jobs run sequentially (`needs`)**: `lint` → `dry-run` → `generate`. **All three run on PRs too** — the `generate` render verifies the geometry actually builds (a valid-name-but-fails-to-build render fails the PR), made cheap by the warm FreeCAD/Fasteners caches (~30s). Only the **commit-back + Pages dispatch** inside `generate` is gated to non-PR events (push-to-`main`/`workflow_dispatch`), so PRs render-to-verify but never commit or deploy.
 
 1. **`lint`** (no FreeCAD): `uv sync --dev`, then `ruff check .` and `mypy generate.py pipeline/`. Working dir `hardware-gen`.
 2. **`dry-run`** (no FreeCAD): parses/validates YAML via `generate.py --dry-run`, then runs `generate_standards_json.py` and `generate_custom_icons.py` (no `--check`) as a **validation gate** — they parse the source YAML and validate every SVG's metadata, failing CI on malformed input. `--dry-run` also **validates every render's `id` against the committed `pipeline/fastener_types.json` snapshot** (the workbench registry), so a non-existent standard name (e.g. `iso7980`) fails *here*, with no FreeCAD, rather than as an opaque enumeration error mid-render. They no longer diff against a committed JSON for the catalogs (there isn't one — it's generated at deploy time).
-3. **`generate`** (requires FreeCAD, `contents: write` + `actions: write`): downloads & extracts the FreeCAD 1.1.1 AppImage to `/opt/freecad` (cached by URL), installs the Fasteners workbench (cached weekly via a `%Y-%U` key). It first **rechecks `pipeline/fastener_types.json` live against the installed workbench** (`dump_fastener_types.py` `mode=check`) so the snapshot can't silently go stale after a FreeCAD/Fasteners upgrade, then runs `generate.py` headless (`QT_QPA_PLATFORM=offscreen`, `FREECADCMD` pointed at the extracted binary). Uploads STEP and SVG artifacts (30-day retention), then **commits the regenerated `hardware-gen/output/*.svg` back to the repo** as `github-actions[bot]` with `[skip ci]` and pushes. When SVGs changed, it then **dispatches `pages.yml`** (`gh workflow run`) so the new geometry ships to Pages.
+3. **`generate`** (requires FreeCAD, `contents: write` + `actions: write`): downloads & extracts the FreeCAD 1.1.1 AppImage to `/opt/freecad` (cached by URL), installs the Fasteners workbench (cached weekly via a `%Y-%U` key). It first **rechecks `pipeline/fastener_types.json` live against the installed workbench** (`dump_fastener_types.py` `mode=check`) so the snapshot can't silently go stale after a FreeCAD/Fasteners upgrade, then runs `generate.py` headless (`QT_QPA_PLATFORM=offscreen`, `FREECADCMD` pointed at the extracted binary). Uploads STEP and SVG artifacts (30-day retention). The final step **commits the regenerated `hardware-gen/output/*.svg` back to the repo** as `github-actions[bot]` with `[skip ci]`, pushes, and — when SVGs changed — **dispatches `pages.yml`** (`gh workflow run`) so the new geometry ships to Pages. **This publish step is gated `if: github.event_name != 'pull_request'`**: on a PR everything above it still runs (render + artifact upload, the verification), but it commits/deploys nothing — the elevated `contents: write` perms are auto-downgraded to read on fork PRs and the step is skipped on all PRs.
 
 **Caching notes**: the FreeCAD AppImage cache key is the download URL — bump `FREECAD_APPIMAGE_URL` to upgrade FreeCAD and the cache invalidates automatically. The Fasteners workbench cache rotates weekly so upstream fixes get picked up without manual cache busting.
 

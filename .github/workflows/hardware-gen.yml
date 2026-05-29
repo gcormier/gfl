@@ -1,7 +1,11 @@
 name: hardware-gen
 
 on:
+  # push is scoped to main so feature-branch pushes don't double-run alongside
+  # the PR's pull_request event. Merge to main has no associated PR, so this is
+  # where the publish path (commit SVGs + dispatch pages) runs.
   push:
+    branches: [main]
     paths:
       - "hardware-gen/config/**"
       - "hardware-gen/freecad_scripts/**"
@@ -187,7 +191,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+      # Publish step — gated to non-PR events. On a PR the steps above still run
+      # (render + upload artifacts) to verify the geometry builds, but we never
+      # commit or deploy: a PR checkout is a detached merge ref, and deploying
+      # would ship unreviewed changes. Runs on push-to-main and workflow_dispatch.
       - name: Commit generated SVGs to repo for GitHub Pages
+        if: github.event_name != 'pull_request'
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

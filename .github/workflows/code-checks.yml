@@ -5,7 +5,11 @@ name: code-checks
 # images/custom/**, or the generated catalogs — those are validated by
 # hardware-gen.yml. A frontend PR runs only this; a hardware PR runs only that.
 on:
+  # push is scoped to main so feature-branch pushes don't double-run alongside
+  # the PR's pull_request event. The PR is the gate; the main run is a cheap
+  # post-merge backstop.
   push:
+    branches: [main]
     paths:
       - "*.js"
       - "*.html"
