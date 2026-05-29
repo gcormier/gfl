@@ -34,6 +34,7 @@ import json
 import logging
 import math
 import os
+import re
 import sys
 
 logging.basicConfig(
@@ -144,9 +145,31 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pipeline.svg_crop import compute_bbox  # noqa: E402
 
 
+# Visual line weight as a fraction of the larger viewBox dimension, so every
+# standard renders with the same apparent stroke regardless of part size.
+# TechDraw emits a fixed absolute stroke-width (≈0.7mm) that looks chunky on
+# small parts and thin on large ones; normalising to the bbox fixes both.
+_STROKE_FRACTION = 0.012
+_STROKE_MIN_MM = 0.08
+_STROKE_MAX_MM = 0.5
+
+
+def _normalize_stroke_width(fragment: str, w: float, h: float) -> str:
+    """Rewrite the group's absolute stroke-width to scale with the bbox."""
+    stroke = max(w, h) * _STROKE_FRACTION
+    stroke = max(_STROKE_MIN_MM, min(_STROKE_MAX_MM, stroke))
+    return re.sub(
+        r'stroke-width="[^"]*"',
+        f'stroke-width="{stroke:.4f}"',
+        fragment,
+        count=1,
+    )
+
+
 def _wrap_svg_fragment(fragment: str) -> str:
     """Wrap a bare <g>…</g> fragment in a complete SVG document."""
     x, y, w, h = compute_bbox(fragment)
+    fragment = _normalize_stroke_width(fragment, w, h)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" '

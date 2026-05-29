@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "hardware-gen/config/**"
+      - "hardware-gen/freecad_scripts/**"
       - "hardware-gen/generate_custom_icons.py"
       - "images/custom/**"
       - "custom-icons.json"
@@ -11,6 +12,7 @@ on:
   pull_request:
     paths:
       - "hardware-gen/config/**"
+      - "hardware-gen/freecad_scripts/**"
       - "hardware-gen/generate_custom_icons.py"
       - "images/custom/**"
       - "custom-icons.json"
