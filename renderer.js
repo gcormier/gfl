@@ -70,19 +70,22 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
       ctx.scale((w * scale) / 24, (h * scale) / 24);
       ctx.fill(new Path2D(content.iconPath));
       ctx.restore();
-    } else if (content.standard?.image) {
-      try {
-        const img = await loadImage(assetUrl(content.standard.image));
-        ctx.save();
-        const { x, y, w, h } = layout.image;
-        const fitS = Math.min((w * scale) / img.naturalWidth, (h * scale) / img.naturalHeight);
-        const dw = img.naturalWidth * fitS;
-        const dh = img.naturalHeight * fitS;
-        const dx = x * scale + ((w * scale) - dw) / 2;
-        const dy = y * scale + ((h * scale) - dh) / 2;
-        ctx.drawImage(img, dx, dy, dw, dh);
-        ctx.restore();
-      } catch { /* image failed to load, skip */ }
+    } else {
+      const urls = resolveViewUrls(content);
+      for (const url of urls) {
+        try {
+          const img = await loadImage(assetUrl(url));
+          ctx.save();
+          const { x, y, w, h } = layout.image;
+          const fitS = Math.min((w * scale) / img.naturalWidth, (h * scale) / img.naturalHeight);
+          const dw = img.naturalWidth * fitS;
+          const dh = img.naturalHeight * fitS;
+          const dx = x * scale + ((w * scale) - dw) / 2;
+          const dy = y * scale + ((h * scale) - dh) / 2;
+          ctx.drawImage(img, dx, dy, dw, dh);
+          ctx.restore();
+        } catch { /* image failed to load, skip */ }
+      }
     }
   }
 
@@ -123,8 +126,16 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
 }
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
+function resolveViewUrls(content) {
+  const rv = content.standard?.renderViews;
+  const views = content.selectedViews;
+  if (rv && views?.length) return views.map(v => rv[v]).filter(Boolean);
+  if (content.standard?.image) return [content.standard.image];
+  return [];
+}
+
 async function computeLayout(ctx, content, pw, ph, scale) {
-  const hasImage  = content.imageSource === 'drawing' && !!content.standard?.image;
+  const hasImage  = content.imageSource === 'drawing' && resolveViewUrls(content).length > 0;
   const hasIcon   = (content.imageSource === 'mdi' || content.imageSource === 'custom') && !!content.iconPath;
   const hasVisual = hasImage || hasIcon;
   const hasQR = content.showQRCode && content.qrCodeUrl;
@@ -153,7 +164,7 @@ async function computeLayout(ctx, content, pw, ph, scale) {
     if (hasIcon) {
       ar = 1;  // MDI/custom icons are square (24×24 viewBox)
     } else {
-      ar = await getImageAspectRatio(assetUrl(content.standard?.image));
+      ar = await getImageAspectRatio(assetUrl(resolveViewUrls(content)[0]));
     }
     const aspectRatio = pw / ph;
     const useHorizontal = ar > 3.4 && aspectRatio >= 2.9;

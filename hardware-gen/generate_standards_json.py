@@ -101,6 +101,12 @@ def _render(collected: list[tuple[StandardSpec, Path]]) -> str:
         }
         if std.image is not None:
             entry["image"] = std.image
+        if std.renders:
+            render = std.renders[0]
+            entry["renderViews"] = {
+                view: f"/hardware-gen/output/{render.name}_{view}.svg"
+                for view in render.pipeline.export_2d_views
+            }
         output.append(entry)
     return json.dumps(output, indent=2, ensure_ascii=False) + "\n"
 

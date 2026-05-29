@@ -651,6 +651,51 @@ select.form-input {
 .view-chip:hover { border-color: var(--ink-2); color: var(--ink-2); }
 .view-chip.chip-active { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+/* ─── Standard view selector chips ──────────────────────────────────────────── */
+
+.view-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.view-sel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: grab;
+  text-transform: uppercase;
+  transition: background 0.08s, color 0.08s, border-color 0.08s;
+  user-select: none;
+}
+.view-sel-chip:hover { border-color: var(--ink-2); color: var(--ink-2); }
+.view-sel-chip.view-sel-active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.view-sel-chip.view-sel-dragging { opacity: 0.4; }
+.view-sel-chip.view-sel-over { border-style: dashed; border-color: var(--accent); color: var(--accent); }
+.view-sel-chip.view-sel-active.view-sel-over { background: var(--accent); border-style: dashed; }
+
+.view-sel-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .height-toggle {
   display: flex;
   align-items: center;

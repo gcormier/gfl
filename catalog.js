@@ -70,6 +70,99 @@ function updateHighlight(items) {
   items.forEach((el, i) => el.classList.toggle('highlighted', i === searchHighlightIdx));
 }
 
+const VIEW_LABELS = { iso: 'ISO', top: 'Top', side: 'Side', front: 'Front' };
+
+function initViewChips(standard) {
+  const views = standard.renderViews ? Object.keys(standard.renderViews) : [];
+  viewChipOrder = [...views];
+  if (views.length === 0) {
+    selectedViews = [];
+  } else if (views.length === 1) {
+    selectedViews = [views[0]];
+  } else {
+    const def = views.includes('iso') ? 'iso' : views[0];
+    selectedViews = [def];
+  }
+}
+
+function renderViewChips() {
+  const group = document.getElementById('standardViewGroup');
+  const row = document.getElementById('viewChipRow');
+  group.hidden = viewChipOrder.length < 2;
+  if (group.hidden) return;
+
+  row.innerHTML = '';
+
+  viewChipOrder.forEach((view, chipIdx) => {
+    const selIdx = selectedViews.indexOf(view);
+    const isSelected = selIdx >= 0;
+
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'view-sel-chip' + (isSelected ? ' view-sel-active' : '');
+    chip.draggable = true;
+    chip.dataset.view = view;
+
+    const label = VIEW_LABELS[view] ?? view;
+    if (isSelected) {
+      chip.innerHTML = `<span class="view-sel-order">${selIdx + 1}</span>${escHtml(label)}`;
+    } else {
+      chip.textContent = label;
+    }
+
+    chip.addEventListener('click', () => {
+      const si = selectedViews.indexOf(view);
+      if (si >= 0) {
+        if (selectedViews.length > 1) selectedViews.splice(si, 1);
+      } else {
+        // Insert in chip order position
+        const insertAt = viewChipOrder
+          .slice(0, chipIdx + 1)
+          .filter(v => selectedViews.includes(v) || v === view).length - 1;
+        selectedViews.splice(Math.max(0, insertAt), 0, view);
+        selectedViews = viewChipOrder.filter(v => selectedViews.includes(v));
+      }
+      renderViewChips();
+      scheduleRender();
+    });
+
+    chip.addEventListener('dragstart', e => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(chipIdx));
+      chip.classList.add('view-sel-dragging');
+    });
+
+    chip.addEventListener('dragend', () => {
+      chip.classList.remove('view-sel-dragging');
+      row.querySelectorAll('.view-sel-over').forEach(c => c.classList.remove('view-sel-over'));
+    });
+
+    chip.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      row.querySelectorAll('.view-sel-over').forEach(c => c.classList.remove('view-sel-over'));
+      chip.classList.add('view-sel-over');
+    });
+
+    chip.addEventListener('dragleave', () => chip.classList.remove('view-sel-over'));
+
+    chip.addEventListener('drop', e => {
+      e.preventDefault();
+      chip.classList.remove('view-sel-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = chipIdx;
+      if (fromIdx === toIdx) return;
+      const [moved] = viewChipOrder.splice(fromIdx, 1);
+      viewChipOrder.splice(toIdx, 0, moved);
+      selectedViews = viewChipOrder.filter(v => selectedViews.includes(v));
+      renderViewChips();
+      scheduleRender();
+    });
+
+    row.appendChild(chip);
+  });
+}
+
 function selectStandard(s) {
   selectedStandard = s;
   searchHighlightIdx = -1;
@@ -97,6 +190,9 @@ function selectStandard(s) {
   const systems = new Set(s.designations.map(d => d.system));
   prefGroup.hidden = !(systems.has('ISO') && systems.has('DIN'));
 
+  initViewChips(s);
+  renderViewChips();
+
   updateStarButtons();
 
   scheduleRender();
@@ -104,8 +200,11 @@ function selectStandard(s) {
 
 function clearStandard() {
   selectedStandard = null;
+  selectedViews = [];
+  viewChipOrder = [];
   document.getElementById('selectedStandard').hidden = true;
   document.getElementById('standardPrefGroup').hidden = true;
+  document.getElementById('standardViewGroup').hidden = true;
   renderStandardsList(document.getElementById('standardSearch').value);
   updateStarButtons();
   scheduleRender();
@@ -412,6 +511,7 @@ function buildLabelContent() {
     showMargins: document.getElementById('showMargins').checked,
     qrCodeUrl: document.getElementById('qrUrl').value.trim(),
     standard: selectedStandard,
+    selectedViews: selectedViews.length ? [...selectedViews] : null,
   };
 }
 const MDI_VERSION  = '7.4.47';

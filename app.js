@@ -1,7 +1,7 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '1.9.3';
+const APP_VERSION = '1.9.4';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')
@@ -23,6 +23,8 @@ let batchIndex = 0;               // current label index in batch preview
 let showImage = true;             // IMAGE chip state
 let iconPosition = 'right';       // 'left' | 'right' — icon placement side
 let specMode = 'standard';        // 'standard' | 'freeform'
+let selectedViews = [];           // ordered selected view names for label render
+let viewChipOrder = [];           // ordered list of all available view names
 let printQueue = [];              // accumulated labels for multi-print
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
