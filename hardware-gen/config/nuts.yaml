@@ -8,7 +8,7 @@ standards:
       - { system: DIN, code: "934" }
     renders:
       - size: M8
-        views: [top]
+        views: [iso, top]
 
   - id: iso10511
     description: "Fasteners - Prevailing torque hexagon nuts - Thin nuts (with non-metallic insert)"
