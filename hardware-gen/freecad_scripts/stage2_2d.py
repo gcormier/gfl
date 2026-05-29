@@ -135,29 +135,15 @@ log.info("Loaded %d shape(s) from model.", len(shapes))
 # then fall back to Part.makeShapeString / Drawing workbench approach for
 # older installations.
 
-def _bbox_from_svg_fragment(fragment: str) -> tuple[float, float, float, float]:
-    """Compute approximate (x, y, width, height) viewBox from SVG path data."""
-    import re
-    xs: list[float] = []
-    ys: list[float] = []
-    for m in re.finditer(r'd\s*=\s*"([^"]*)"', fragment):
-        nums = [float(n) for n in re.findall(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?', m.group(1))]
-        # Treat alternating numbers as x/y coordinates (rough but sufficient for
-        # technical drawings with M/L/A commands; arc parameters inflate the box
-        # slightly but the content always remains visible).
-        xs.extend(nums[0::2])
-        ys.extend(nums[1::2])
-    if not xs or not ys:
-        return -100.0, -100.0, 200.0, 200.0
-    pad = 5.0
-    min_x, max_x = min(xs) - pad, max(xs) + pad
-    min_y, max_y = min(ys) - pad, max(ys) + pad
-    return min_x, min_y, max_x - min_x, max_y - min_y
+# Import the shared, command-aware bbox parser from the pipeline package.
+# (freecadcmd runs a stock CPython, so a pure-stdlib sibling module imports fine.)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pipeline.svg_crop import compute_bbox  # noqa: E402
 
 
 def _wrap_svg_fragment(fragment: str) -> str:
     """Wrap a bare <g>…</g> fragment in a complete SVG document."""
-    x, y, w, h = _bbox_from_svg_fragment(fragment)
+    x, y, w, h = compute_bbox(fragment)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" '

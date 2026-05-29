@@ -1,7 +1,7 @@
 'use strict';
 
 const LS_FAV_KEY   = 'gfl_favorites';
-const APP_VERSION = '1.9.6';
+const APP_VERSION = '1.9.7';
 
 // Base path — works at /gfl/ (GitHub Pages) and / (custom domain)
 const BASE = location.pathname.endsWith('/')

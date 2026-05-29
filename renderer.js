@@ -72,19 +72,31 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
       ctx.restore();
     } else {
       const urls = resolveViewUrls(content);
+      const { x, y, w, h } = layout.image;
+      // Load every view and lay them out side by side in columns whose widths
+      // are proportional to each view's aspect ratio, so none overlap.
+      const imgs = [];
       for (const url of urls) {
-        try {
-          const img = await loadImage(assetUrl(url));
-          ctx.save();
-          const { x, y, w, h } = layout.image;
-          const fitS = Math.min((w * scale) / img.naturalWidth, (h * scale) / img.naturalHeight);
+        try { imgs.push(await loadImage(assetUrl(url))); }
+        catch { /* image failed to load, skip */ }
+      }
+      if (imgs.length) {
+        const gapMm = imgs.length > 1 ? VIEW_GAP_MM : 0;
+        const totalGap = gapMm * (imgs.length - 1);
+        const ars = imgs.map(im => im.naturalWidth / im.naturalHeight);
+        const arSum = ars.reduce((a, b) => a + b, 0);
+        const drawableW = (w - totalGap) * scale;
+        let colX = x * scale;
+        imgs.forEach((img, idx) => {
+          const colW = drawableW * (ars[idx] / arSum);
+          const fitS = Math.min(colW / img.naturalWidth, (h * scale) / img.naturalHeight);
           const dw = img.naturalWidth * fitS;
           const dh = img.naturalHeight * fitS;
-          const dx = x * scale + ((w * scale) - dw) / 2;
+          const dx = colX + (colW - dw) / 2;
           const dy = y * scale + ((h * scale) - dh) / 2;
           ctx.drawImage(img, dx, dy, dw, dh);
-          ctx.restore();
-        } catch { /* image failed to load, skip */ }
+          colX += colW + gapMm * scale;
+        });
       }
     }
   }
@@ -164,7 +176,11 @@ async function computeLayout(ctx, content, pw, ph, scale) {
     if (hasIcon) {
       ar = 1;  // MDI/custom icons are square (24×24 viewBox)
     } else {
-      ar = await getImageAspectRatio(assetUrl(resolveViewUrls(content)[0]));
+      // Combined width-to-height of all selected views placed side by side,
+      // so the image box is wide enough to hold them without overlap.
+      const urls = resolveViewUrls(content);
+      const ars = await Promise.all(urls.map(u => getImageAspectRatio(assetUrl(u))));
+      ar = ars.reduce((a, b) => a + b, 0) || 1;
     }
     const aspectRatio = pw / ph;
     const useHorizontal = ar > 3.4 && aspectRatio >= 2.9;
@@ -308,6 +324,7 @@ const LABEL_MARGIN_TOP = 1;         // mm top margin
 const FONT_PRIMARY = { family: 'Noto Sans', weight: '900' };
 const FONT_SECONDARY = { family: 'Oswald', weight: '300' };
 const QR_SIZE_MM = 10;
+const VIEW_GAP_MM = 0.6;            // gap between side-by-side hardware views
 // ─── Image Cache & Loading ────────────────────────────────────────────────────
 
 const imageCache = new Map();
