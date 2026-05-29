@@ -182,12 +182,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # -f: regenerated SVGs may differ from the committed copies (local
-          # modifications), which plain `git rm` refuses. We re-add every
-          # current file immediately after, so forcing removal just lets
-          # genuinely-deleted renders drop out of the index.
-          git rm -f --ignore-unmatch hardware-gen/output/*.svg
-          git add hardware-gen/output/*.svg || true
+          # Stage adds, modifications, AND deletions in one go. -A on the
+          # directory drops renders whose source standard was removed, while
+          # picking up new/changed SVGs — without the working-tree-deleting
+          # footgun of `git rm` (which would wipe the freshly generated files
+          # before they could be re-added).
+          git add -A hardware-gen/output
           if git diff --cached --quiet; then
             echo "No SVG changes to commit."
           else
