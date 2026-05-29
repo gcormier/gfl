@@ -54,6 +54,11 @@ async function init() {
   updateStarButtons();
   render();
   fetchGhStars();
+
+  // First-visit welcome, or re-launch after a tour-worthy feature was added.
+  if (tourSeenVersion() < TOUR_VERSION) {
+    startTour(tourSeenVersion() === 0 ? 'welcome' : 'upgrade');
+  }
 }
 
 async function fetchGhStars() {
@@ -146,6 +151,15 @@ function bindEvents() {
     if (e.target === e.currentTarget) hideShortcutsHelp();
   });
   document.getElementById('shortcutsCloseBtn')?.addEventListener('click', hideShortcutsHelp);
+
+  // Tutorial tour
+  document.getElementById('tutorialBtn')?.addEventListener('click', () => startTour('manual'));
+  document.getElementById('tourCloseBtn')?.addEventListener('click', endTour);
+  document.getElementById('tourNextBtn')?.addEventListener('click', () => showTourStep(tourIndex + 1));
+  document.getElementById('tourPrevBtn')?.addEventListener('click', () => showTourStep(tourIndex - 1));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('tourOverlay').hidden) endTour();
+  });
 
   // Agent status poll
   pollAgentStatus();
@@ -481,6 +495,182 @@ function showShortcutsHelp() {
 
 function hideShortcutsHelp() {
   document.getElementById('shortcutsOverlay').hidden = true;
+}
+
+// ─── Tutorial / Spotlight Tour ──────────────────────────────────────────────────
+
+// Current tour version. FULLY DECOUPLED from the app/deploy version — it is NOT
+// derived from the build. Bump ONLY when adding/changing a tour step for a major
+// feature, NOT on bugfixes or routine releases. This is the single flag that
+// re-launches the tour for returning users (each step also carries a `since`).
+const TOUR_VERSION = 1;
+const LS_TOUR_KEY = 'gfl_tour_version'; // last TOUR_VERSION the user completed
+
+let tourIndex = 0;
+let tourPrevIndex = -1;       // for skip-direction when a target is unavailable
+let tourCurrentEl = null;
+let tourLaunchReason = 'manual'; // 'welcome' | 'upgrade' | 'manual'
+let tourSeenAtStart = 0;
+let tourSampleStandard = null;
+let tourRepositionRAF = null;
+
+function tourSeenVersion() {
+  const v = parseInt(localStorage.getItem(LS_TOUR_KEY), 10);
+  return Number.isFinite(v) ? v : 0;
+}
+
+// Drive the app into a state where the length input and view chips are visible:
+// fastener product type, standard spec mode, and a screw standard with >=2 views.
+function tourEnsureSampleStandard() {
+  if (specMode !== 'standard') {
+    specMode = 'standard';
+    setSegValue('modeSeg', 'standard');
+    document.getElementById('standardGroup').hidden = false;
+  }
+  if (getProductType() !== 'fastener') {
+    document.querySelector('input[name="productType"][value="fastener"]').checked = true;
+    setSegValue('productTypeSeg', 'fastener');
+    onProductTypeChange();
+  }
+  if (!tourSampleStandard) {
+    tourSampleStandard =
+      standards.find(s => s.hardwareType === 'screw' && s.renderViews && Object.keys(s.renderViews).length >= 2)
+      || standards.find(s => s.hardwareType === 'screw')
+      || standards.find(s => s.renderViews && Object.keys(s.renderViews).length >= 2)
+      || standards[0] || null;
+  }
+  if (tourSampleStandard && (!selectedStandard || selectedStandard.id !== tourSampleStandard.id)) {
+    selectStandard(tourSampleStandard);
+  }
+}
+
+const TOUR_STEPS = [
+  {
+    selector: '#lengthGroup',
+    title: 'Batch lengths',
+    body: 'Type a single length, or a comma-separated list like "4, 6, 8, 10, 12" to generate one label per length in a single batch. The hint below shows how many labels you\'ll get.',
+    since: 1,
+    setup: tourEnsureSampleStandard,
+  },
+  {
+    selector: '#standardViewGroup',
+    title: 'Choose & reorder views',
+    body: 'Click a view chip to show or hide it on the label, and drag chips to change their order. The number badge shows the order each selected view appears in.',
+    since: 1,
+    setup: tourEnsureSampleStandard,
+  },
+  {
+    selector: '#addToQueueBtn',
+    title: 'Add to queue',
+    body: 'Add the current design to the print queue. Queued labels are packed together onto one continuous strip when you print — so you don\'t waste tape between labels.',
+    since: 1,
+  },
+  {
+    selector: '.fav-strip',
+    title: 'Favorites',
+    body: 'Star a standard or icon to pin it here for one-click reuse. Export / Import lets you back up or share your favorites.',
+    since: 1,
+  },
+  {
+    selector: '#shortcutsBtn',
+    title: 'Keyboard shortcuts',
+    body: 'Ctrl+Enter prints and Shift+Enter adds to the queue. Click here any time to see the full list.',
+    since: 1,
+  },
+];
+
+function startTour(reason) {
+  tourSeenAtStart = tourSeenVersion();
+  tourLaunchReason = reason || 'manual';
+  tourPrevIndex = -1;
+  document.getElementById('tourOverlay').hidden = false;
+  window.addEventListener('resize', onTourReposition);
+  window.addEventListener('scroll', onTourReposition, true);
+  showTourStep(0);
+}
+
+function endTour() {
+  document.getElementById('tourOverlay').hidden = true;
+  window.removeEventListener('resize', onTourReposition);
+  window.removeEventListener('scroll', onTourReposition, true);
+  tourCurrentEl = null;
+  localStorage.setItem(LS_TOUR_KEY, String(TOUR_VERSION));
+}
+
+function showTourStep(i) {
+  if (i < 0 || i >= TOUR_STEPS.length) { endTour(); return; }
+  tourIndex = i;
+  const step = TOUR_STEPS[i];
+  try { step.setup?.(); } catch (e) { console.error('Tour setup failed:', e); }
+
+  const el = document.querySelector(step.selector);
+  if (!el || el.hidden || el.offsetParent === null) {
+    // Target unavailable — skip in the direction we're navigating.
+    const dir = i >= tourPrevIndex ? 1 : -1;
+    tourPrevIndex = i;
+    showTourStep(i + dir);
+    return;
+  }
+  tourPrevIndex = i;
+  tourCurrentEl = el;
+
+  const newBadge = (tourLaunchReason === 'upgrade' && step.since > tourSeenAtStart)
+    ? ' <span class="tour-new-badge">New</span>' : '';
+  document.getElementById('tourTitle').innerHTML = escHtml(step.title) + newBadge;
+  document.getElementById('tourBody').textContent = step.body;
+  document.getElementById('tourProgress').textContent = `Step ${i + 1} / ${TOUR_STEPS.length}`;
+
+  const intro = document.getElementById('tourIntro');
+  if (i === 0 && tourLaunchReason !== 'manual') {
+    intro.textContent = tourLaunchReason === 'upgrade'
+      ? 'New features have been added since you last visited.'
+      : "Welcome! Here's a quick tour of the key features.";
+    intro.hidden = false;
+  } else {
+    intro.hidden = true;
+  }
+
+  document.getElementById('tourPrevBtn').disabled = (i === 0);
+  document.getElementById('tourNextBtn').textContent =
+    (i === TOUR_STEPS.length - 1) ? 'Finish' : 'Next →';
+
+  el.scrollIntoView({ block: 'center', inline: 'nearest' });
+  requestAnimationFrame(() => positionTour(el));
+}
+
+function positionTour(el) {
+  if (!el) return;
+  const sp = document.getElementById('tourSpotlight');
+  const pop = document.getElementById('tourPopover');
+  const pad = 6;
+  const gap = 14;
+  const r = el.getBoundingClientRect();
+
+  sp.style.top = (r.top - pad) + 'px';
+  sp.style.left = (r.left - pad) + 'px';
+  sp.style.width = (r.width + pad * 2) + 'px';
+  sp.style.height = (r.height + pad * 2) + 'px';
+
+  const pr = pop.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let top = r.bottom + gap;
+  if (top + pr.height > vh - 8) {
+    const above = r.top - gap - pr.height;
+    top = above >= 8 ? above : Math.max(8, (vh - pr.height) / 2);
+  }
+  let left = r.left + r.width / 2 - pr.width / 2;
+  left = Math.max(8, Math.min(left, vw - pr.width - 8));
+
+  pop.style.top = top + 'px';
+  pop.style.left = left + 'px';
+}
+
+function onTourReposition() {
+  if (!tourCurrentEl) return;
+  if (tourRepositionRAF) cancelAnimationFrame(tourRepositionRAF);
+  tourRepositionRAF = requestAnimationFrame(() => positionTour(tourCurrentEl));
 }
 
 // ─── UI State Changes ─────────────────────────────────────────────────────────

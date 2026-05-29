@@ -1164,6 +1164,121 @@ kbd {
   line-height: 1.4;
 }
 
+/* ─── Tutorial Tour ─────────────────────────────────────────────────────────── */
+
+/* Transparent host: dimming comes from the spotlight's box-shadow, so the
+   underlying UI stays legible. Only the popover captures pointer events. */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.tour-spotlight {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  pointer-events: none;
+}
+
+.tour-popover {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+
+.tour-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tour-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.tour-new-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.tour-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--ink-3);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.tour-close:hover { color: var(--ink); }
+
+.tour-intro {
+  margin: 0;
+  padding: 10px 18px;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--rule-soft);
+}
+
+.tour-body {
+  padding: 14px 18px;
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--rule);
+}
+
+.tour-progress {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+
+.tour-actions .btn-primary { width: auto; }
+
 /* ─── JSCad Design Section ──────────────────────────────────────────────────── */
 
 .jscad-hint {

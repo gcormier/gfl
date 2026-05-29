@@ -40,6 +40,8 @@
       <label class="link-btn">Import<input type="file" id="importFavInput" accept=".json" hidden /></label>
       <span>·</span>
       <button id="shortcutsBtn" class="link-btn">Shortcuts</button>
+      <span>·</span>
+      <button id="tutorialBtn" class="link-btn">Tutorial</button>
     </div>
   </div>
 
@@ -451,6 +453,25 @@
         <tr><td><kbd>Shift</kbd> + <kbd>Enter</kbd></td><td>Add to queue</td></tr>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Tutorial / Spotlight Tour -->
+<div id="tourOverlay" class="tour-overlay" hidden>
+  <div id="tourSpotlight" class="tour-spotlight"></div>
+  <div id="tourPopover" class="tour-popover">
+    <div class="tour-hdr">
+      <span id="tourTitle" class="tour-title"></span>
+      <button id="tourCloseBtn" class="tour-close" title="Close">×</button>
+    </div>
+    <p id="tourIntro" class="tour-intro" hidden></p>
+    <div id="tourBody" class="tour-body"></div>
+    <div class="tour-actions">
+      <span id="tourProgress" class="tour-progress"></span>
+      <span class="preview-footer-spacer"></span>
+      <button id="tourPrevBtn" type="button" class="link-btn">Back</button>
+      <button id="tourNextBtn" type="button" class="btn-primary">Next →</button>
+    </div>
   </div>
 </div>
 
