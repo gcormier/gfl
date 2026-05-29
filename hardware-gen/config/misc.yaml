@@ -31,11 +31,10 @@ standards:
   # ── Wing nuts ─────────────────────────────────────────────────────────────
   # hardware_type overrides the default — this is a nut, but it lives in misc
   # because it is a distinct form factor from the standard hex nuts in nuts.yaml.
-  - id: iso315
+  - id: din315
     description: "Wing nuts"
     hardware_type: nut
     designations:
-      - { system: ISO, code: "315" }
       - { system: DIN, code: "315" }
 
   # ── E-clips / retaining rings ─────────────────────────────────────────────

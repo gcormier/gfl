@@ -1,87 +1,94 @@
 """
-Standards registry and ISO-first enforcement.
+Standards registry and validation.
 
-Policy: DIN standards that have a direct ISO equivalent are remapped to the
-ISO standard automatically, and a warning is emitted.  This keeps library
-outputs consistent and avoids duplicate assets for equivalent geometry.
+Policy: a render's ``id`` (uppercased) **is** the FreeCAD Fasteners workbench
+standard name. There is no hand-maintained DIN→ISO remap table — that would be
+external knowledge the workbench doesn't encode, and silently rewriting an id
+would make the built geometry drift from the declared id and its render
+filenames. Instead the set of valid names is *derived from the workbench
+itself*: ``freecad_scripts/dump_fastener_types.py`` introspects the workbench's
+own ``FSFastenerTypeDB`` (the exact registry FreeCAD validates ``.Type``
+against) into the committed snapshot ``pipeline/fastener_types.json``.
 
-FreeCAD Fasteners workbench standard names are used verbatim as the
-canonical identifiers (they match the ISO/DIN number without spaces).
+``resolve_standard`` only normalises case/whitespace. ``validate_standard``
+checks membership against that snapshot, so a bad name (e.g. ``ISO7980``, which
+the workbench doesn't ship) fails at the fast no-FreeCAD validation gate with a
+"did you mean" hint — instead of as an opaque enumeration error mid-render. The
+``generate`` CI job additionally rechecks the snapshot live against the
+installed workbench (``dump_fastener_types.py`` ``mode=check``) so the snapshot
+can't silently go stale after a FreeCAD/workbench upgrade.
+
+Only standards that actually render are validated — catalog-only entries never
+reach the workbench, so they may carry real-world identifiers (e.g. DIN 2093
+Belleville washers) that the Fasteners workbench does not implement.
 """
 
 from __future__ import annotations
 
+import difflib
+import json
 import logging
+from functools import lru_cache
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-# ── DIN → ISO mapping ─────────────────────────────────────────────────────────
-# Keys are the DIN designations users might type; values are the preferred ISO.
-# Sourced from the FreeCAD Fasteners workbench standard list.
+# Committed snapshot of the workbench registry (generated, never hand-edited).
+_SNAPSHOT_PATH = Path(__file__).parent / "fastener_types.json"
 
-DIN_TO_ISO: dict[str, str] = {
-    # Socket cap screws
-    "DIN912":  "ISO4762",
-    # Hex head screws (full thread)
-    "DIN933":  "ISO4017",
-    # Hex head screws (partial thread)
-    "DIN931":  "ISO4014",
-    # Hex nuts
-    "DIN934":  "ISO4032",
-    # Thin hex nuts
-    "DIN439":  "ISO4035",
-    # Prevailing-torque thin hex nuts (nyloc thin)
-    "DIN985":  "ISO10511",
-    # Prevailing-torque hex nuts (nyloc full)
-    "DIN982":  "ISO7042",
-    # Plain washers (normal series)
-    "DIN125A": "ISO7089",
-    "DIN125B": "ISO7090",
-    # Spring lock washers
-    "DIN127":  "ISO7980",
-    # Countersunk socket screws
-    "DIN7991": "ISO10642",
-    # Slotted cheese head screws
-    "DIN84":   "ISO1207",
-    # Slotted countersunk flat head screws
-    "DIN963":  "ISO2009",
-    # Slotted pan head screws
-    "DIN85":   "ISO1580",
-    # Cross-recessed pan head screws
-    "DIN7985": "ISO7045",
-    # Hexagon set screws (cup point)
-    "DIN916":  "ISO4029",
-    # Hexagon set screws (flat point)
-    "DIN913":  "ISO4026",
-    # Hexagon set screws (dog point)
-    "DIN915":  "ISO4028",
-    # Stud bolts
-    "DIN938":  "ISO4031",
-}
+
+class UnknownStandardError(ValueError):
+    """Raised when a render's standard id is not a FreeCAD workbench name."""
+
+
+@lru_cache(maxsize=1)
+def known_standards() -> frozenset[str]:
+    """Return the set of valid workbench standard names from the snapshot.
+
+    Derived from the workbench by ``dump_fastener_types.py``; this just reads
+    the committed JSON so the lightweight validation gate needs no FreeCAD.
+    """
+    try:
+        data = json.loads(_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise RuntimeError(
+            f"Cannot read workbench standards snapshot {_SNAPSHOT_PATH}: {exc}\n"
+            "Regenerate it with freecad_scripts/dump_fastener_types.py (mode=dump)."
+        ) from exc
+    names: set[str] = set()
+    for category_names in data.get("types", {}).values():
+        names.update(category_names)
+    if not names:
+        raise RuntimeError(
+            f"Workbench standards snapshot {_SNAPSHOT_PATH} is empty — regenerate it."
+        )
+    return frozenset(names)
 
 
 def resolve_standard(raw: str) -> str:
+    """Normalise a standard string to the workbench's canonical form.
+
+    Uppercase, strip surrounding whitespace, drop internal spaces. Hyphens are
+    preserved because the workbench uses them in multi-part names
+    (e.g. ``ISO7380-1``). No DIN→ISO remap happens here — see module docstring.
     """
-    Normalise a standard string and enforce the ISO-first policy.
+    return raw.strip().upper().replace(" ", "")
 
-    Returns the canonical standard identifier to pass to the CAD engine.
-    Logs a warning if the input was a DIN standard that was remapped.
+
+def validate_standard(name: str) -> None:
+    """Raise :class:`UnknownStandardError` if *name* is not a workbench standard.
+
+    *name* must already be normalised via :func:`resolve_standard`.
     """
-    # Normalise: strip whitespace, uppercase, remove internal spaces
-    normalised = raw.strip().upper().replace(" ", "")
-    # Hyphens are stripped only for DIN lookup (DIN keys have no hyphens);
-    # the returned canonical name preserves hyphens because FreeCAD uses them
-    # in multi-part standards like ISO7380-1.
-    din_key = normalised.replace("-", "")
-
-    if din_key in DIN_TO_ISO:
-        iso_equiv = DIN_TO_ISO[din_key]
-        log.warning(
-            "Standard '%s' remapped to ISO equivalent '%s'. "
-            "Prefer ISO standards in your YAML config.",
-            raw,
-            iso_equiv,
-        )
-        return iso_equiv
-
-    return normalised
+    known = known_standards()
+    if name in known:
+        return
+    suggestion = difflib.get_close_matches(name, known, n=1, cutoff=0.6)
+    hint = f" Did you mean '{suggestion[0]}'?" if suggestion else ""
+    raise UnknownStandardError(
+        f"'{name}' is not a FreeCAD Fasteners workbench standard.{hint}\n"
+        f"Valid names are derived from the workbench into {_SNAPSHOT_PATH.name}. "
+        "If a render needs a part the workbench doesn't implement, drop the "
+        "render and keep the entry catalog-only; if you upgraded FreeCAD, "
+        "regenerate the snapshot with dump_fastener_types.py."
+    )

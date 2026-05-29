@@ -11,15 +11,12 @@ standards:
         # No length for washers; the workbench derives thickness from the standard.
         views: [top]
 
-  # DIN 127 remaps to ISO 7980 via the DIN→ISO policy in pipeline/standards.py.
-  - id: iso7980
+  # Catalog-only — the FreeCAD Fasteners workbench ships no split/spring lock
+  # washer (its Washer category is plain washers only), so this can't render.
+  - id: din127
     description: "Spring lock washers (split lock washers) for hexagon head screws"
     designations:
-      - { system: ISO, code: "7980" }
       - { system: DIN, code: "127" }
-    renders:
-      - size: M8
-        views: [top]
 
   # Catalog-only — bent/saddle-type spring lock washer; no ISO equivalent.
   - id: din128a

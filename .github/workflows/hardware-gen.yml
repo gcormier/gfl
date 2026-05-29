@@ -150,6 +150,16 @@ jobs:
       - name: Set FREECADCMD path
         run: echo "FREECADCMD=/opt/freecad/usr/bin/freecadcmd" >> "$GITHUB_ENV"
 
+      # Authoritative "Both" recheck: the committed pipeline/fastener_types.json
+      # powers the fast no-FreeCAD validation gate (lint/dry-run); here, where
+      # FreeCAD is present, confirm it still matches the installed workbench so
+      # it can't silently go stale after a FreeCAD/Fasteners upgrade.
+      - name: Recheck fastener-types snapshot against the live workbench
+        env:
+          QT_QPA_PLATFORM: offscreen
+          HW_GEN_PARAMS: '{"mode":"check","path":"pipeline/fastener_types.json"}'
+        run: $FREECADCMD freecad_scripts/dump_fastener_types.py
+
       - name: Generate hardware artifacts
         env:
           QT_QPA_PLATFORM: offscreen
