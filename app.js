@@ -503,7 +503,7 @@ function hideShortcutsHelp() {
 // derived from the build. Bump ONLY when adding/changing a tour step for a major
 // feature, NOT on bugfixes or routine releases. This is the single flag that
 // re-launches the tour for returning users (each step also carries a `since`).
-const TOUR_VERSION = 1;
+const TOUR_VERSION = 2;
 const LS_TOUR_KEY = 'gfl_tour_version'; // last TOUR_VERSION the user completed
 
 let tourIndex = 0;
@@ -558,6 +558,19 @@ const TOUR_STEPS = [
     body: 'Click a view chip to show or hide it on the label, and drag chips to change their order. The number badge shows the order each selected view appears in.',
     since: 1,
     setup: tourEnsureSampleStandard,
+  },
+  {
+    selector: '#standardContributeLink',
+    title: 'Contribute a standard',
+    body: 'Missing a hardware standard? Standards are defined as code — open this guide to add one via a pull request, and it ships to everyone once merged.',
+    since: 2,
+    setup: tourEnsureSampleStandard,
+  },
+  {
+    selector: '#contributeGalleryLink',
+    title: 'Contribute to the gallery',
+    body: 'Design your own icon in the browser and submit it to the shared gallery — no account or setup needed, GitHub handles the pull request for you.',
+    since: 2,
   },
   {
     selector: '#addToQueueBtn',
