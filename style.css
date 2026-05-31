@@ -1348,6 +1348,47 @@ kbd {
   font-family: var(--font-mono);
 }
 
+.jscad-render-opts {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.jscad-mode-btns {
+  display: flex;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.jscad-mode-btn {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.jscad-mode-btn + .jscad-mode-btn {
+  border-left: 1px solid var(--rule);
+}
+
+.jscad-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.jscad-render-opts .it-slider-row {
+  flex: 1;
+  min-width: 160px;
+  margin-top: 0;
+}
+
 .jscad-status.ok    { color: #16a34a; }
 .jscad-status.error { color: #dc2626; white-space: pre-wrap; word-break: break-word; }
 
