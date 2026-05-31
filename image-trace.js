@@ -301,6 +301,7 @@ function _scheduleTrace() {
       const nPaths = (code.match(/polygon\(/g) || []).length;
       const nPts   = (code.match(/\[-?\d/g) || []).length;
       _setTraceStatus(`✓ ${nPts} vertices · ${nPaths} path${nPaths !== 1 ? 's' : ''}`, 'ok');
+      previewJscadCode(code); // live-update JSCAD preview canvas
     } else {
       _itLastCode  = null;
       btn.disabled = true;

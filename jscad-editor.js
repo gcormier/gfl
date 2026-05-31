@@ -75,8 +75,16 @@ function renderPreview(canvas, outlines, bbox) {
     }
     path.closePath();
   }
-  ctx.fillStyle = '#111';
-  ctx.fill(path, 'evenodd');
+  if (_renderMode === 'outline') {
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth  = _strokeWidth;
+    ctx.lineJoin   = 'round';
+    ctx.lineCap    = 'round';
+    ctx.stroke(path);
+  } else {
+    ctx.fillStyle = '#111';
+    ctx.fill(path, 'evenodd');
+  }
   ctx.restore();
 }
 
@@ -86,6 +94,8 @@ let _editorGetValue = null;   // () => string — returns current code
 let _editorSetValue = null;   // (string) => void — sets code
 let _lastResult = null;       // { outlines, bbox } of most recent successful run
 let _runDebounce = null;
+let _renderMode  = 'solid';   // 'solid' | 'outline'
+let _strokeWidth = 0.3;
 
 const DEFAULT_TEMPLATE = `// JSCad custom-image definition
 // Injected namespaces are available: primitives, booleans, transforms, expansions, hulls
@@ -155,6 +165,9 @@ function _outlinesToSvg(outlines, bbox) {
     }
     d += ' Z';
   }
+  if (_renderMode === 'outline') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(4)} ${h.toFixed(4)}">\n  <path d="${d}" fill="none" stroke="#000000" stroke-width="${_strokeWidth.toFixed(3)}" stroke-linejoin="round" stroke-linecap="round"/>\n</svg>\n`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(4)} ${h.toFixed(4)}">\n  <path d="${d}" fill="#000000" fill-rule="evenodd"/>\n</svg>\n`;
 }
 
@@ -168,6 +181,25 @@ function _exportSvg() {
   a.download = 'icon.svg';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ─── Live preview from image-trace sliders (no editor change) ─────────────────
+
+async function previewJscadCode(code) {
+  const canvas   = document.getElementById('jscadPreviewCanvas');
+  const statusEl = document.getElementById('jscadStatus');
+  if (!canvas || !statusEl) return;
+  try {
+    const result = await runJscadCode(code);
+    _lastResult = result;
+    renderPreview(canvas, result.outlines, result.bbox);
+    statusEl.textContent = '✓ OK';
+    statusEl.className = 'jscad-status ok';
+    ['jscadUseBtn', 'jscadSubmitBtn', 'jscadExportSvgBtn'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = false;
+    });
+  } catch { /* keep existing preview on trace failure */ }
 }
 
 // ─── "Use as Icon" ────────────────────────────────────────────────────────────
@@ -238,6 +270,29 @@ async function initJscadEditor() {
   } catch {
     // CodeMirror unavailable — textarea remains active, no action needed.
   }
+
+  // Mode toggle (Solid / Outline) + stroke width slider
+  const solidBtn    = document.getElementById('jscadModeSolid');
+  const outlineBtn  = document.getElementById('jscadModeOutline');
+  const strokeRow   = document.getElementById('jscadStrokeRow');
+  const strokeSlider = document.getElementById('jscadStrokeSlider');
+  const strokeVal   = document.getElementById('jscadStrokeVal');
+
+  function _setRenderMode(mode) {
+    _renderMode = mode;
+    solidBtn?.classList.toggle('active', mode === 'solid');
+    outlineBtn?.classList.toggle('active', mode === 'outline');
+    if (strokeRow) strokeRow.hidden = mode !== 'outline';
+    if (_lastResult) renderPreview(canvas, _lastResult.outlines, _lastResult.bbox);
+  }
+
+  solidBtn?.addEventListener('click', () => _setRenderMode('solid'));
+  outlineBtn?.addEventListener('click', () => _setRenderMode('outline'));
+  strokeSlider?.addEventListener('input', () => {
+    _strokeWidth = +strokeSlider.value;
+    if (strokeVal) strokeVal.textContent = _strokeWidth.toFixed(2);
+    if (_lastResult) renderPreview(canvas, _lastResult.outlines, _lastResult.bbox);
+  });
 
   runBtn.addEventListener('click', _runAndPreview);
   if (useBtn) useBtn.addEventListener('click', _onUseAsIcon);
