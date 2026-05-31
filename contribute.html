@@ -59,9 +59,16 @@
           <svg class="it-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
           </svg>
-          <span class="it-drop-text">Drop image here or <u>click to browse</u></span>
-          <span class="it-drop-hint">Ctrl+V / ⌘V to paste from clipboard</span>
-          <input type="file" id="itFileInput" accept="image/*" hidden />
+          <span class="it-drop-text">Drop image or SVG here or <u>click to browse</u></span>
+          <span class="it-drop-hint">Ctrl+V / ⌘V to paste · SVGs are imported directly without tracing</span>
+          <input type="file" id="itFileInput" accept="image/*,.svg" hidden />
+        </div>
+
+        <div id="itSvgImportedArea" hidden>
+          <p class="jscad-status ok" id="itSvgImportedMsg"></p>
+          <div class="jscad-toolbar" style="margin-top:8px">
+            <button type="button" id="itClearSvgBtn" class="btn-secondary jscad-btn">Clear</button>
+          </div>
         </div>
 
         <div id="itImageArea" hidden>

@@ -343,8 +343,83 @@ function _loadImageElement(img) {
   _scheduleTrace();
 }
 
+// ─── Direct SVG import (bypasses rasterise→trace round-trip) ─────────────────
+// Parses <path d="…"> elements from raw SVG text, normalises to JSCAD coordinate
+// space (centred, 10-unit bounding box, Y flipped), and hands the outlines
+// straight to setDirectPreview() in jscad-editor.js.  Returns the path count on
+// success or 0 if no parseable paths were found.
+
+function _parseSvgAndPreview(text) {
+  const pathRe = /<path\b[^>]*?\bd="([^"]+)"/g;
+  let pm;
+  const rawPaths = [];
+  while ((pm = pathRe.exec(text)) !== null) {
+    for (const pts of _pathDToSubpaths(pm[1])) {
+      if (pts.length >= 3) rawPaths.push(pts);
+    }
+  }
+  if (!rawPaths.length) return 0;
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const path of rawPaths) {
+    for (const [x, y] of path) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  }
+
+  const span  = Math.max(maxX - minX, maxY - minY) || 1;
+  const scale = 10 / span;
+  const midX  = (minX + maxX) / 2;
+  const midY  = (minY + maxY) / 2;
+
+  const outlines = rawPaths.map(path =>
+    path.map(([x, y]) => [
+      +((x - midX) * scale).toFixed(4),
+      +((midY - y) * scale).toFixed(4),  // flip Y: SVG Y-down → JSCAD Y-up
+    ])
+  );
+
+  const hw = (maxX - minX) * scale / 2;
+  const hh = (maxY - minY) * scale / 2;
+  setDirectPreview(outlines, { minX: -hw, maxX: hw, minY: -hh, maxY: hh });
+  return rawPaths.length;
+}
+
+function _showSvgImportedArea(msg) {
+  document.getElementById('itDropZone').hidden  = true;
+  document.getElementById('itImageArea').hidden = true;
+  const area = document.getElementById('itSvgImportedArea');
+  if (area) {
+    area.hidden = false;
+    const el = document.getElementById('itSvgImportedMsg');
+    if (el) el.textContent = msg;
+  }
+}
+
 function _loadFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
+  if (!file) return;
+
+  if (file.type === 'image/svg+xml' || file.name?.toLowerCase().endsWith('.svg')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text  = e.target.result;
+      const count = _parseSvgAndPreview(text);
+      if (count) {
+        const name = (text.match(/<title>([^<]*)<\/title>/)?.[1] || '').trim();
+        const kw   = (text.match(/<desc>([^<]*)<\/desc>/)?.[1] || '').trim();
+        const id   = (file.name || '').replace(/\.svg$/i, '');
+        if (name || kw) _galleryMeta = { id, name, keywords: kw };
+        _showSvgImportedArea(`✓ ${count} path${count !== 1 ? 's' : ''} imported${name ? ` · ${name}` : ''}`);
+      } else {
+        _setTraceStatus('No paths found in SVG — try the image trace instead', 'error');
+      }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) return;
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload  = () => { _loadImageElement(img); URL.revokeObjectURL(url); };
@@ -374,12 +449,30 @@ function initImageTracer() {
 
   // Global paste (Ctrl+V / ⌘V) — capture phase so CodeMirror can't swallow it first
   document.addEventListener('paste', e => {
-    const item = [...e.clipboardData.items].find(it => it.type.startsWith('image/'));
-    console.log('[image-trace] paste event, image item=', item, 'all items=', [...e.clipboardData.items].map(i => i.type));
-    if (item) {
+    const items = [...e.clipboardData.items];
+    // SVG on clipboard (e.g. copy from Inkscape/Illustrator)
+    const svgItem = items.find(it => it.type === 'image/svg+xml');
+    if (svgItem) {
       e.preventDefault();
       e.stopPropagation();
-      _loadFile(item.getAsFile());
+      svgItem.getAsString(text => {
+        _galleryMeta = null;
+        const count = _parseSvgAndPreview(text);
+        if (count) {
+          const name = (text.match(/<title>([^<]*)<\/title>/)?.[1] || '').trim();
+          _showSvgImportedArea(`✓ ${count} path${count !== 1 ? 's' : ''} imported${name ? ` · ${name}` : ''}`);
+        } else {
+          _setTraceStatus('No paths found in pasted SVG', 'error');
+        }
+      });
+      return;
+    }
+    const imgItem = items.find(it => it.type.startsWith('image/'));
+    if (imgItem) {
+      e.preventDefault();
+      e.stopPropagation();
+      _galleryMeta = null;
+      _loadFile(imgItem.getAsFile());
     }
   }, { capture: true });
 
@@ -416,12 +509,19 @@ function initImageTracer() {
     document.getElementById('jscadSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // Clear
+  // Clear raster image
   document.getElementById('itClearBtn').addEventListener('click', () => {
-    _itOrigCanvas = _itSelection = _itLastCode = null;
+    _itOrigCanvas = _itSelection = _itLastCode = _galleryMeta = null;
     document.getElementById('itDropZone').hidden  = false;
     document.getElementById('itImageArea').hidden = true;
     document.getElementById('itInsertBtn').disabled = true;
     _setTraceStatus('', '');
+  });
+
+  // Clear direct SVG import
+  document.getElementById('itClearSvgBtn')?.addEventListener('click', () => {
+    _galleryMeta = null;
+    document.getElementById('itSvgImportedArea').hidden = true;
+    document.getElementById('itDropZone').hidden = false;
   });
 }

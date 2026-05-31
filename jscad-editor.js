@@ -202,6 +202,19 @@ async function previewJscadCode(code) {
   } catch { /* keep existing preview on trace failure */ }
 }
 
+// Called by image-trace.js after parsing SVG paths directly (no JSCAD round-trip).
+function setDirectPreview(outlines, bbox) {
+  const canvas   = document.getElementById('jscadPreviewCanvas');
+  const statusEl = document.getElementById('jscadStatus');
+  _lastResult = { outlines, bbox };
+  if (canvas)   renderPreview(canvas, outlines, bbox);
+  if (statusEl) { statusEl.textContent = '✓ SVG imported'; statusEl.className = 'jscad-status ok'; }
+  ['jscadUseBtn', 'jscadSubmitBtn', 'jscadExportSvgBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = false;
+  });
+}
+
 // ─── "Use as Icon" ────────────────────────────────────────────────────────────
 
 function _onUseAsIcon() {
