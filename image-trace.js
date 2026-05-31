@@ -115,6 +115,25 @@ function _polyArea(pts) {
   return Math.abs(a) * 0.5;
 }
 
+// Representative interior-ish point (vertex average). Good enough for the
+// convex-ish nested contours produced by tracing line art (silhouettes, rings).
+function _polyCentroid(pts) {
+  let x = 0, y = 0;
+  for (const [px, py] of pts) { x += px; y += py; }
+  return [x / pts.length, y / pts.length];
+}
+
+// Ray-casting point-in-polygon test.
+function _pointInPoly([x, y], poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (((yi > y) !== (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 
 let _itOrigCanvas = null;
@@ -223,19 +242,50 @@ function _toJscad(paths) {
       `  return polygon({ points: ${fmt(paths[0])} });`,
       '}'
     );
-  } else {
-    lines.push(
-      'const { polygon } = primitives;',
-      'const { subtract } = booleans;', '',
-      'function main() {',
-      `  const outer = polygon({ points: ${fmt(paths[0])} });`
-    );
-    for (let i = 1; i < paths.length; i++) {
-      lines.push(`  const hole${i} = polygon({ points: ${fmt(paths[i])} });`);
-    }
-    const holeNames = paths.slice(1).map((_, i) => `hole${i+1}`).join(', ');
-    lines.push(`  return subtract(outer, ${holeNames});`, '}');
+    return lines.join('\n');
   }
+
+  // Even-odd nesting: a contour's depth = how many other contours enclose it.
+  // Even depth → solid (added), odd depth → hole (subtracted). This preserves
+  // concentric detail (e.g. a ferrule mouth's nested rings) that a flat
+  // "largest = outer, everything else = hole" model would erase.
+  // depth[i] = number of contours that enclose contour i. A contour j encloses
+  // i when i's interior point falls inside j AND j bounds a larger area — the
+  // area test is what distinguishes "outside" from "inside" for concentric
+  // shapes that share a centre (every centre point lies within every ring).
+  const cents = paths.map(_polyCentroid);
+  const areas = paths.map(_polyArea);
+  const depth = paths.map((_, i) =>
+    paths.reduce((d, q, j) =>
+      (j !== i && areas[j] > areas[i] && _pointInPoly(cents[i], q) ? d + 1 : d), 0));
+
+  const solids = [], holes = [];
+  paths.forEach((p, i) => (depth[i] % 2 === 0 ? solids : holes).push(p));
+
+  // Degenerate trace where nothing read as an outer shape — fall back to
+  // treating the largest contour as the sole solid so we still emit geometry.
+  if (!solids.length) solids.push(holes.shift());
+
+  lines.push(
+    'const { polygon } = primitives;',
+    'const { union, subtract } = booleans;', '',
+    'function main() {'
+  );
+
+  solids.forEach((p, i) => lines.push(`  const solid${i} = polygon({ points: ${fmt(p)} });`));
+  holes.forEach((p, i)  => lines.push(`  const hole${i} = polygon({ points: ${fmt(p)} });`));
+
+  const solidNames = solids.map((_, i) => `solid${i}`).join(', ');
+  const filled = solids.length > 1 ? `union(${solidNames})` : solidNames;
+
+  if (holes.length) {
+    const holeNames = holes.map((_, i) => `hole${i}`).join(', ');
+    lines.push(`  return subtract(${filled}, ${holeNames});`);
+  } else {
+    lines.push(`  return ${filled};`);
+  }
+  lines.push('}');
+
   return lines.join('\n');
 }
 
