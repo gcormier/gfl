@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" class="comfy contrib-page">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contribute to the Gallery — Gridfinity Label Generator</title>
+  <link rel="icon" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans:wght@400;700;900&family=Oswald:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Stubs required by jscad-editor.js before it loads -->
+  <script>
+    'use strict';
+    const BASE = location.pathname.endsWith('/')
+      ? location.pathname
+      : location.pathname.slice(0, location.pathname.lastIndexOf('/') + 1);
+    const assetUrl = path => BASE + path.replace(/^\//, '');
+    function scheduleRender() {}  // no-op: no label canvas on this page
+    function setJscadResult() {}  // no-op: "Use as Icon" hidden on this page
+  </script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Top Bar ─────────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <svg class="logo" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+        <rect x="1" y="1" width="6" height="6"/><rect x="11" y="1" width="6" height="6"/>
+        <rect x="1" y="11" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/>
+      </svg>
+      <span class="site-title">Gridfinity Label Generator</span>
+      <code id="appVersion" class="version-pill"></code>
+      <span class="topbar-spacer"></span>
+      <a href="index.html" class="gh-link">← Back to app</a>
+      <a href="https://github.com/gcormier/gfl" class="gh-link" target="_blank" rel="noopener">github.com/gcormier/gfl ↗</a>
+    </div>
+  </header>
+
+  <!-- ── Page Intro ─────────────────────────────────────────────────────── -->
+  <div class="contrib-page-intro">
+    <h1 class="contrib-page-title">Contribute to the Gallery</h1>
+    <p class="contrib-page-subtitle">Trace an image or design a shape with JSCad, then submit it as an icon — it joins the shared gallery for everyone to use in the label editor. No local tooling required.</p>
+  </div>
+
+  <!-- ── Main Layout ────────────────────────────────────────────────────── -->
+  <div class="contrib-layout contrib-layout-single">
+
+    <!-- ── Editor Column ──────────────────────────────────────────────── -->
+    <div class="contrib-edit-col">
+
+      <!-- 00 · Generate from Image -->
+      <section class="cfg-section" id="imageTraceSection">
+        <div class="section-hdr"><span class="section-num">00</span> Generate from Image <span class="it-optional">(optional)</span></div>
+        <p class="hint-text">Drop, browse, or paste an engineering drawing to trace a starting JSCAD polygon. Drag on the image to select the region to trace.</p>
+
+        <div id="itDropZone" class="it-drop-zone">
+          <svg class="it-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+          <span class="it-drop-text">Drop image here or <u>click to browse</u></span>
+          <span class="it-drop-hint">Ctrl+V / ⌘V to paste from clipboard</span>
+          <input type="file" id="itFileInput" accept="image/*" hidden />
+        </div>
+
+        <div id="itImageArea" hidden>
+          <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
+          <p class="hint-text it-sel-hint">Drag on the image above to select a region — or leave unselected to trace the whole image</p>
+
+          <div class="it-sliders">
+            <div class="it-slider-row">
+              <label class="it-slider-label" for="itThresholdSlider">Threshold</label>
+              <input type="range" id="itThresholdSlider" class="it-slider" min="10" max="245" value="128" />
+              <span class="it-slider-val" id="itThresholdVal">128</span>
+            </div>
+            <div class="it-slider-row">
+              <label class="it-slider-label" for="itEpsilonSlider">Simplify</label>
+              <input type="range" id="itEpsilonSlider" class="it-slider" min="0" max="30" value="0" step="0.5" />
+              <span class="it-slider-val" id="itEpsilonVal">0</span>
+            </div>
+          </div>
+
+          <div class="jscad-toolbar">
+            <button type="button" id="itInsertBtn" class="btn-primary jscad-btn" disabled>Insert into Editor ↓</button>
+            <button type="button" id="itClearBtn" class="btn-secondary jscad-btn">Clear image</button>
+          </div>
+          <div id="itTraceStatus" class="jscad-status"></div>
+        </div>
+      </section>
+
+      <!-- 01 · JSCAD Editor -->
+      <section class="cfg-section" id="jscadSection">
+        <div class="section-hdr"><span class="section-num">01</span> Design (JSCAD)</div>
+        <p class="hint-text jscad-hint">
+          Write parametric 2D geometry using <code>primitives</code>, <code>booleans</code>,
+          <code>transforms</code>. <code>main()</code> must return a 2D shape (geom2).
+          Or trace an image above to generate a starting outline.
+        </p>
+        <div id="jscadEditorWrap" class="jscad-editor-wrap"></div>
+        <div class="jscad-toolbar">
+          <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
+          <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
+          <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Contribute to Gallery…</button>
+        </div>
+        <div class="jscad-render-opts">
+          <div class="jscad-mode-btns">
+            <button type="button" id="jscadModeSolid"   class="jscad-mode-btn active">Solid</button>
+            <button type="button" id="jscadModeOutline" class="jscad-mode-btn">Outline</button>
+          </div>
+          <div class="it-slider-row" id="jscadStrokeRow" hidden>
+            <label class="it-slider-label" for="jscadStrokeSlider">Stroke</label>
+            <input type="range" id="jscadStrokeSlider" class="it-slider" min="0.05" max="2" value="0.3" step="0.05" />
+            <span class="it-slider-val" id="jscadStrokeVal">0.30</span>
+          </div>
+        </div>
+        <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
+        <div id="jscadStatus" class="jscad-status"></div>
+      </section>
+
+      <!-- 02 · How to contribute -->
+      <section class="cfg-section">
+        <div class="section-hdr"><span class="section-num">02</span> How to contribute</div>
+        <ol class="contrib-guide-steps">
+          <li>
+            <strong>Design your icon</strong> — trace an image above, or edit the JSCad code and click
+            <strong>▶ Run</strong> to preview. <code>main()</code> must return a single 2D shape.
+          </li>
+          <li>
+            <strong>Submit a PR</strong> — click <strong>Contribute to Gallery…</strong>, give it a name,
+            keywords, and a filename id (e.g. <code>hex-wrench</code>), then <strong>Open on GitHub →</strong>.
+            GitHub pre-fills a single SVG file under <code>images/custom/</code> and walks you through forking
+            &amp; opening a pull request — no CLI or authentication needed. Once merged, it appears for everyone
+            under <strong>Icon → Gallery</strong>.
+          </li>
+          <li>
+            <strong>Use it now</strong> — while your PR is in review, click <strong>Export SVG ↓</strong>
+            to download your icon as a vector file. Then on the main app go to
+            <strong>Icon → Upload SVG…</strong> to use it immediately in your current session.
+          </li>
+        </ol>
+        <p class="contrib-guide-note">
+          See <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> for file
+          format details and local development instructions.
+        </p>
+      </section>
+
+    </div><!-- /.contrib-edit-col -->
+  </div><!-- /.contrib-layout -->
+</div><!-- /#app -->
+
+<!-- Contribution Modal -->
+<div id="contribOverlay" class="shortcuts-overlay" hidden>
+  <div class="shortcuts-dialog contrib-dialog">
+    <div class="shortcuts-hdr">
+      <span class="shortcuts-title" id="contribModalTitle">Contribute to Gallery as PR</span>
+      <button type="button" onclick="closeContribModal()" class="shortcuts-close">×</button>
+    </div>
+
+    <div id="contribNameRow">
+      <p class="contrib-step-text">
+        <b>Name</b> — shown in the icon picker.
+      </p>
+      <input type="text" id="contribNameInput" class="contrib-id-input" placeholder="e.g. Hex Wrench" autocomplete="off" />
+    </div>
+
+    <div id="contribKeywordsRow">
+      <p class="contrib-step-text">
+        <b>Keywords</b> — comma-separated terms people can search by.
+      </p>
+      <input type="text" id="contribKeywordsInput" class="contrib-id-input" placeholder="e.g. tool, allen, hardware" autocomplete="off" />
+    </div>
+
+    <div id="contribIdRow">
+      <p class="contrib-step-text">
+        <b>Filename id</b> — lowercase letters, digits, dashes.
+        It becomes <code>images/custom/&lt;id&gt;.svg</code>.
+      </p>
+      <input type="text" id="contribStdIdInput" class="contrib-id-input" placeholder="e.g. hex-wrench" autocomplete="off" />
+    </div>
+
+    <p class="contrib-step-text hint-text" id="contribHintNew">
+      Clicking <b>Open on GitHub</b> opens a new tab on github.com with the SVG file
+      pre-filled. GitHub will offer to fork the repo and open a pull request — no
+      authentication required here. Once merged it appears under <b>Icon → Gallery</b>
+      for everyone.
+    </p>
+
+    <p class="contrib-step-text contrib-error" id="contribErrorMsg"></p>
+
+    <div class="contrib-actions">
+      <button type="button" onclick="closeContribModal()" class="btn-secondary">Cancel</button>
+      <button type="button" onclick="submitContribModal()" class="btn-primary">Open on GitHub →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@jscad/modeling@2.13.0/dist/jscad-modeling.min.js"></script>
+<script src="https://unpkg.com/imagetracerjs@1.2.6/imagetracer_v1.2.6.js"></script>
+<script src="jscad-editor.js"></script>
+<script src="image-trace.js"></script>
+<script src="github-contrib.js"></script>
+<script>
+'use strict';
+
+// ── Page Init ─────────────────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Populate version pill from VERSION file
+  fetch(assetUrl('VERSION')).then(r => r.text()).then(v => {
+    const el = document.getElementById('appVersion');
+    if (el) el.textContent = 'v' + v.trim();
+  }).catch(() => {});
+
+  // Init JSCAD editor (defined in jscad-editor.js) — starts at the blank template
+  await initJscadEditor();
+
+  // Init image tracer (defined in image-trace.js)
+  initImageTracer();
+});
+</script>
+</body>
+</html>

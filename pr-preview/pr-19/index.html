@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en" class="comfy">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gridfinity Label Generator</title>
+  <link rel="icon" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans:wght@400;700;900&family=Oswald:wght@300;400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Top Bar ─────────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <svg class="logo" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+        <rect x="1" y="1" width="6" height="6"/><rect x="11" y="1" width="6" height="6"/>
+        <rect x="1" y="11" width="6" height="6"/><rect x="11" y="11" width="6" height="6"/>
+      </svg>
+      <span class="site-title">Gridfinity Label Generator</span>
+      <code id="appVersion" class="version-pill"></code>
+      <code id="libVersion" class="version-pill"></code>
+      <span class="topbar-spacer"></span>
+      <a href="contribute.html" id="contributeGalleryLink" class="gh-link">Contribute to the Gallery →</a>
+      <a href="https://github.com/gcormier/gfl" class="gh-link" target="_blank" rel="noopener">github.com/gcormier/gfl ↗<span id="ghStars"></span></a>
+      <a href="https://www.paypal.me/gcormier" class="gh-link donate-link" target="_blank" rel="noopener">Donate ♥</a>
+    </div>
+  </header>
+
+  <!-- ── Favorites Strip ────────────────────────────────────────────────── -->
+  <div class="fav-strip">
+    <span class="fav-strip-label">★ Favorites</span>
+    <div id="favChips" class="fav-chips"></div>
+    <div class="fav-strip-io">
+      <button id="exportFavBtn" class="link-btn">Export</button>
+      <span>·</span>
+      <label class="link-btn">Import<input type="file" id="importFavInput" accept=".json" hidden /></label>
+      <span>·</span>
+      <button id="shortcutsBtn" class="link-btn">Shortcuts</button>
+      <span>·</span>
+      <button id="tutorialBtn" class="link-btn">Tutorial</button>
+    </div>
+  </div>
+
+  <!-- ── Workspace ──────────────────────────────────────────────────────── -->
+  <div class="workspace">
+
+    <!-- ── Configure Column ─────────────────────────────────────────────── -->
+    <div class="configure-col">
+
+      <!-- Hidden radio/checkbox inputs for JS compatibility -->
+      <div hidden aria-hidden="true">
+        <input type="radio" name="productType"  value="fastener" checked />
+        <input type="radio" name="productType"  value="general" />
+        <input type="radio" name="measureSystem" value="metric"  checked />
+        <input type="radio" name="measureSystem" value="imperial" />
+        <input type="radio" name="imageSource"  value="drawing" checked />
+        <input type="radio" name="imageSource"  value="mdi" />
+        <input type="radio" name="imageSource"  value="custom" />
+        <input type="radio" name="imageSource"  value="none" />
+        <input type="radio" name="printPath"    value="agent" />
+        <input type="radio" name="printPath"    value="serial" checked />
+        <input type="radio" name="labelHeight"  value="12" checked />
+        <input type="radio" name="labelHeight"  value="9" />
+        <input type="radio" name="stdPref"      value="auto" checked />
+        <input type="radio" name="stdPref"      value="ISO" />
+        <input type="radio" name="stdPref"      value="DIN" />
+        <input type="checkbox" id="showQR" />
+        <input type="checkbox" id="showMargins" checked />
+        <!-- imageSourceDrawingOption required by app.js -->
+        <label id="imageSourceDrawingOption"></label>
+      </div>
+
+      <!-- 01 · Product Type -->
+      <section class="cfg-section">
+        <div class="section-hdr"><span class="section-num">01</span> Product type</div>
+        <div class="seg-ctrl seg-full" id="productTypeSeg" role="radiogroup" aria-label="Product type">
+          <button class="seg-btn seg-active" data-value="fastener" role="radio" aria-checked="true">Fastener</button>
+          <button class="seg-btn" data-value="general" role="radio" aria-checked="false">General item</button>
+        </div>
+      </section>
+
+      <!-- 02 · Specification (fastener) -->
+      <section class="cfg-section" id="fastenerSection">
+        <div class="section-hdr"><span class="section-num">02</span> Specification</div>
+
+        <div class="spec-mini-row">
+          <span class="mini-label">System</span>
+          <div class="seg-ctrl" id="measureSeg" role="radiogroup" aria-label="Measurement system">
+            <button class="seg-btn seg-sm seg-active" data-value="metric"   role="radio" aria-checked="true">Metric</button>
+            <button class="seg-btn seg-sm"             data-value="imperial" role="radio" aria-checked="false">Imperial</button>
+          </div>
+          <span class="mini-label">Mode</span>
+          <div class="seg-ctrl" id="modeSeg" role="radiogroup" aria-label="Spec mode">
+            <button class="seg-btn seg-sm seg-active" data-value="standard" role="radio" aria-checked="true">Standard</button>
+            <button class="seg-btn seg-sm"             data-value="freeform" role="radio" aria-checked="false">Freeform</button>
+          </div>
+        </div>
+
+        <!-- Standard picker -->
+        <div id="standardGroup">
+          <div class="search-container">
+            <input type="text" id="standardSearch" class="form-input" placeholder="Filter standards…" autocomplete="off" />
+          </div>
+          <div class="standards-scroll-list" id="standardsList"></div>
+          <div class="contribute-link" id="standardContributeLink">
+            Missing a standard? <a href="https://github.com/gcormier/gfl/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Learn how to contribute</a>
+          </div>
+          <div id="selectedStandard" class="selected-standard" hidden>
+            <img id="standardImage" alt="" class="standard-thumb" />
+            <div class="standard-info">
+              <span id="standardName" class="standard-name"></span>
+              <span id="standardDesc" class="standard-desc"></span>
+            </div>
+            <button type="button" id="starStandardBtn" class="star-btn" title="Favorite">☆</button>
+            <button type="button" id="clearStandard" class="clear-btn" title="Clear">×</button>
+          </div>
+        </div>
+
+        <!-- ISO/DIN pref -->
+        <div id="standardPrefGroup" hidden>
+          <div class="field-label" style="display:flex;align-items:center;margin-bottom:6px">
+            Show Standard As
+            <span class="tooltip-anchor" aria-label="tooltip">?
+              <span class="tooltip-text">
+                <b>Auto</b> — primary designation only<br>
+                <b>ISO</b> — ISO code only<br>
+                <b>DIN</b> — DIN code only<br>
+                Only shown when a standard has both codes.
+              </span>
+            </span>
+          </div>
+          <div class="seg-ctrl" id="stdPrefSeg" role="radiogroup" aria-label="Standard preference">
+            <button class="seg-btn seg-sm seg-active" data-value="auto" role="radio" aria-checked="true">Auto</button>
+            <button class="seg-btn seg-sm"             data-value="ISO"  role="radio" aria-checked="false">ISO</button>
+            <button class="seg-btn seg-sm"             data-value="DIN"  role="radio" aria-checked="false">DIN</button>
+          </div>
+        </div>
+
+        <!-- View selector -->
+        <div id="standardViewGroup" hidden>
+          <div class="field-label" style="display:flex;align-items:center;margin-bottom:6px">Views</div>
+          <div id="viewChipRow" class="view-chip-row"></div>
+        </div>
+
+        <!-- Thread size: Metric -->
+        <div id="threadMetricGroup" class="form-group">
+          <label class="field-label" for="threadSize">Thread Size</label>
+          <select id="threadSize" class="form-input">
+            <option value="">Select size…</option>
+            <option>M1</option><option>M1.2</option><option>M1.4</option>
+            <option>M1.6</option><option>M2</option><option>M2.5</option>
+            <option>M3</option><option>M3.5</option><option>M4</option>
+            <option>M5</option><option>M6</option><option>M8</option>
+            <option>M10</option><option>M12</option><option>M14</option>
+            <option>M16</option><option>M18</option><option>M20</option>
+            <option>M22</option><option>M24</option><option>M27</option>
+            <option>M30</option><option>M33</option><option>M36</option>
+            <option>M39</option><option>M42</option><option>M48</option>
+            <option>M52</option><option>M56</option><option>M64</option>
+          </select>
+        </div>
+
+        <!-- Thread size: Imperial -->
+        <div id="threadImperialGroup" class="form-group" hidden>
+          <label class="field-label" for="threadSizeImperial">Thread Size</label>
+          <select id="threadSizeImperial" class="form-input">
+            <option value="">Select size…</option>
+            <option>#0-80</option><option>#1-64</option><option>#1-72</option>
+            <option>#2-56</option><option>#2-64</option><option>#3-48</option>
+            <option>#3-56</option><option>#4-40</option><option>#4-48</option>
+            <option>#5-40</option><option>#5-44</option><option>#6-32</option>
+            <option>#6-40</option><option>#8-32</option><option>#8-36</option>
+            <option>#10-24</option><option>#10-32</option><option>#12-24</option>
+            <option>1/4"-20</option><option>1/4"-28</option>
+            <option>5/16"-18</option><option>5/16"-24</option>
+            <option>3/8"-16</option><option>3/8"-24</option>
+            <option>7/16"-14</option><option>7/16"-20</option>
+            <option>1/2"-13</option><option>1/2"-20</option>
+            <option>9/16"-12</option><option>9/16"-18</option>
+            <option>5/8"-11</option><option>5/8"-18</option>
+            <option>3/4"-10</option><option>3/4"-16</option>
+            <option>7/8"-9</option><option>7/8"-14</option>
+            <option>1"-8</option><option>1"-14</option>
+          </select>
+        </div>
+
+        <!-- Length -->
+        <div id="lengthGroup" class="form-group">
+          <label class="field-label" id="lengthLabel" for="lengthInput">Length (mm)</label>
+          <input type="text" id="lengthInput" class="form-input" placeholder="e.g. 10   or   4, 6, 8, 10, 12" />
+          <p id="batchHint" class="batch-hint" hidden></p>
+        </div>
+      </section>
+
+      <!-- 02 · Item (general mode) -->
+      <section class="cfg-section" id="generalSection" hidden>
+        <div class="section-hdr"><span class="section-num">02</span> Item</div>
+        <div class="form-group">
+          <label class="field-label" for="generalName">Name</label>
+          <input type="text" id="generalName" class="form-input" placeholder="e.g. Cable Tie 3.6×150mm" maxlength="60" />
+        </div>
+      </section>
+
+      <!-- 03 · Icon -->
+      <section class="cfg-section">
+        <div class="section-hdr"><span class="section-num">03</span> Icon</div>
+
+        <!-- Image source seg (replaces old radio group, also drives mdiPickerGroup visibility) -->
+        <div class="icon-ctrl-row">
+          <div class="seg-ctrl" id="imageSourceSeg" role="radiogroup" aria-label="Image source">
+            <button class="seg-btn seg-sm seg-active" data-value="drawing" role="radio" aria-checked="true">Drawing</button>
+            <button class="seg-btn seg-sm"             data-value="mdi"     role="radio" aria-checked="false">MDI</button>
+            <button class="seg-btn seg-sm"             data-value="custom"  role="radio" aria-checked="false">Gallery</button>
+            <button class="seg-btn seg-sm"             data-value="none"    role="radio" aria-checked="false">None</button>
+          </div>
+          <label class="upload-svg-label">
+            ↑ Upload SVG…
+            <input type="file" id="svgUpload" accept=".svg,image/svg+xml" hidden />
+          </label>
+        </div>
+
+        <div class="icon-ctrl-row">
+          <span class="mini-label">Position</span>
+          <div class="seg-ctrl" id="iconPosSeg" role="radiogroup" aria-label="Icon position">
+            <button class="seg-btn seg-sm" data-value="left" role="radio" aria-checked="false">Left</button>
+            <button class="seg-btn seg-sm seg-active" data-value="right" role="radio" aria-checked="true">Right</button>
+          </div>
+        </div>
+
+        <!-- MDI picker -->
+        <div id="mdiPickerGroup" hidden>
+          <div class="search-container">
+            <input type="text" id="mdiSearch" class="form-input" placeholder="Search MDI icons (e.g. bolt, battery…)" autocomplete="off" />
+            <div class="search-results icon-search-results" id="iconSearchResults" hidden></div>
+          </div>
+          <div id="selectedIconDisplay" class="selected-standard" hidden>
+            <canvas id="iconPreviewCanvas" width="36" height="36" class="standard-thumb"></canvas>
+            <div class="standard-info">
+              <span id="selectedIconName" class="standard-name"></span>
+            </div>
+            <button type="button" id="starIconBtn" class="star-btn" title="Favorite">☆</button>
+            <button type="button" id="clearIconBtn" class="clear-btn" title="Clear">×</button>
+          </div>
+        </div>
+
+        <!-- Gallery (community) icon picker -->
+        <div id="customPickerGroup" hidden>
+          <div class="search-container">
+            <input type="text" id="customIconSearch" class="form-input" placeholder="Filter gallery icons…" autocomplete="off" />
+          </div>
+          <div class="community-icons-list" id="customIconsList"></div>
+          <div class="contribute-link">
+            <a href="contribute.html" target="_blank" rel="noopener">Contribute to the Gallery →</a>
+          </div>
+          <div id="selectedCustomIconDisplay" class="selected-standard" hidden>
+            <canvas id="customIconPreviewCanvas" width="36" height="36" class="standard-thumb"></canvas>
+            <div class="standard-info">
+              <span id="selectedCustomIconName" class="standard-name"></span>
+            </div>
+            <button type="button" id="clearCustomIconBtn" class="clear-btn" title="Clear">×</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 · Annotations -->
+      <section class="cfg-section">
+        <div class="section-hdr"><span class="section-num">04</span> Annotations</div>
+        <div class="form-group">
+          <label class="field-label" for="noteInput">Note (optional)</label>
+          <input type="text" id="noteInput" class="form-input" placeholder="e.g. Stainless, black oxide…" maxlength="40" />
+        </div>
+        <div class="form-group">
+          <label class="field-label" for="qrUrl">QR code URL (optional)</label>
+          <input type="url" id="qrUrl" class="form-input" placeholder="https://…" />
+        </div>
+      </section>
+
+      <!-- Favorites management -->
+      <section class="cfg-section" id="favMgmtSection">
+        <div class="section-hdr">Favorites</div>
+        <div id="favIconsSection" hidden>
+          <div class="fav-section-label">Icons</div>
+          <div id="favIconsGrid" class="fav-icons-grid"></div>
+        </div>
+        <div id="favStandardsSection" hidden>
+          <div class="fav-section-label">Standards</div>
+          <div id="favStandardsGrid" class="fav-standards-list"></div>
+        </div>
+        <p id="favEmpty" class="hint-text">No favorites yet — star an icon or standard to save it here.</p>
+      </section>
+
+    </div><!-- /.configure-col -->
+
+    <!-- ── Right Column ──────────────────────────────────────────────────── -->
+    <div class="right-col">
+
+      <!-- Preview Card -->
+      <div class="preview-card">
+        <div class="preview-hdr">
+          <span class="preview-hdr-label">Preview</span>
+          <div class="view-chips">
+            <button class="view-chip chip-active" id="chipImage">IMAGE</button>
+            <button class="view-chip" id="chipQR">QR</button>
+            <button class="view-chip chip-active" id="chipMargins">MARGINS</button>
+          </div>
+          <div class="height-toggle">
+            <span class="mini-label">Height</span>
+            <button class="ht-btn ht-active" data-h="12">12mm</button>
+            <span class="ht-sep">/</span>
+            <button class="ht-btn" data-h="9">9mm</button>
+          </div>
+        </div>
+        <div class="stage">
+          <div id="batchScrubber" class="batch-scrubber" hidden>
+            <button id="batchPrev" class="scrub-btn">‹</button>
+            <span id="batchPos" class="scrub-pos">01 / 1</span>
+            <button id="batchNext" class="scrub-btn">›</button>
+          </div>
+          <canvas id="labelCanvas"></canvas>
+        </div>
+        <div class="preview-footer">
+          <span id="labelSizeInfo">35.0 × 12.0 mm</span>
+          <span id="labelPxInfo"></span>
+          <span>Brother TZe tape</span>
+          <span class="preview-footer-spacer"></span>
+          <button type="button" id="addToQueueBtn" class="add-queue-btn">+ Add to Queue</button>
+        </div>
+      </div>
+
+      <!-- Batch Queue Card (hidden in single mode) -->
+      <div class="batch-queue-card" id="batchQueueCard" hidden>
+        <div class="bq-hdr">
+          <span class="bq-title">Batch queue</span>
+          <span id="batchCount" class="bq-badge">0</span>
+          <span id="batchSummary" class="bq-summary"></span>
+          <button id="addBatchItemBtn" class="bq-add-btn">+ Add</button>
+        </div>
+        <div class="bq-table-wrap">
+          <table class="bq-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Length</th>
+                <th>Note</th>
+                <th>Size</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Print Queue Card (for accumulating labels across modes) -->
+      <div class="batch-queue-card" id="printQueueCard" hidden>
+        <div class="bq-hdr">
+          <span class="bq-title">Print queue</span>
+          <span id="printQueueCount" class="bq-badge">0</span>
+          <span class="bq-summary">Design labels, add to queue, print together</span>
+          <button id="clearQueueBtn" class="bq-add-btn">Clear</button>
+        </div>
+        <div class="bq-table-wrap">
+          <table class="bq-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Note</th>
+                <th>Size</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="printQueueBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Output Card -->
+      <div class="output-card">
+        <div class="out-tabs" role="tablist">
+          <button class="out-tab"                data-tab="agent"    role="tab" aria-selected="false">Print · USB Agent</button>
+          <button class="out-tab out-tab-active" data-tab="serial"   role="tab" aria-selected="true">Print · Web Serial</button>
+          <button class="out-tab"                data-tab="download" role="tab" aria-selected="false">Download PNG</button>
+        </div>
+
+        <!-- Agent tab -->
+        <div class="out-body" id="outBodyAgent" role="tabpanel" hidden>
+          <div id="agentFirstRunHint" class="first-run-hint" hidden>
+            Run <code>uv run agent.py</code> from the <code>print-agent/</code> folder on the machine connected to the printer.
+          </div>
+          <div class="agent-row">
+            <span class="status-dot" id="agentDot"></span>
+            <span id="agentStatusLabel" class="out-status">Checking agent…</span>
+          </div>
+          <label class="out-check">
+            <input type="checkbox" id="autoCut" checked /> Auto-cut
+          </label>
+          <label class="out-check">
+            <input type="checkbox" id="highQualityPrint" checked /> High quality (180×360 dpi)
+          </label>
+          <label class="out-check">
+            <input type="checkbox" id="clearQueueOnPrint" /> Clear queue after print
+          </label>
+          <span class="out-spacer"></span>
+          <button type="button" id="printAgentBtn" class="btn-primary" disabled>Print 1 label →</button>
+        </div>
+
+        <!-- Serial tab -->
+        <div class="out-body" id="outBodySerial" role="tabpanel">
+          <span class="out-hint">Pair PT-P710BT via Bluetooth, then connect. Requires Chrome/Edge.</span>
+          <span class="out-spacer"></span>
+          <button type="button" id="printSerialBtn" class="btn-primary">Connect &amp; Print</button>
+        </div>
+
+        <!-- Download tab -->
+        <div class="out-body" id="outBodyDownload" role="tabpanel" hidden>
+          <span class="out-hint mini-label">Scale</span>
+          <select id="printScale">
+            <option value="8">Preview (low)</option>
+            <option value="12" selected>Standard (12 px/mm)</option>
+            <option value="20">High quality (20 px/mm)</option>
+          </select>
+          <span class="out-spacer"></span>
+          <button type="button" id="downloadBtn" class="btn-primary">Download PNG</button>
+        </div>
+      </div>
+
+    </div><!-- /.right-col -->
+  </div><!-- /.workspace -->
+</div><!-- /#app -->
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script src="printer.js"></script>
+<script src="renderer.js"></script>
+<script src="catalog.js"></script>
+<script src="app.js"></script>
+
+<!-- Shortcuts Help Modal -->
+<div id="shortcutsOverlay" class="shortcuts-overlay" hidden>
+  <div class="shortcuts-dialog">
+    <div class="shortcuts-hdr">
+      <span class="shortcuts-title">Keyboard Shortcuts</span>
+      <button id="shortcutsCloseBtn" class="shortcuts-close">×</button>
+    </div>
+    <table class="shortcuts-table">
+      <tbody>
+        <tr><td><kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Print (active print tab)</td></tr>
+        <tr><td><kbd>Shift</kbd> + <kbd>Enter</kbd></td><td>Add to queue</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Tutorial / Spotlight Tour -->
+<div id="tourOverlay" class="tour-overlay" hidden>
+  <div id="tourSpotlight" class="tour-spotlight"></div>
+  <div id="tourPopover" class="tour-popover">
+    <div class="tour-hdr">
+      <span id="tourTitle" class="tour-title"></span>
+      <button id="tourCloseBtn" class="tour-close" title="Close">×</button>
+    </div>
+    <p id="tourIntro" class="tour-intro" hidden></p>
+    <div id="tourBody" class="tour-body"></div>
+    <div class="tour-actions">
+      <span id="tourProgress" class="tour-progress"></span>
+      <span class="preview-footer-spacer"></span>
+      <button id="tourPrevBtn" type="button" class="link-btn">Back</button>
+      <button id="tourNextBtn" type="button" class="btn-primary">Next →</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

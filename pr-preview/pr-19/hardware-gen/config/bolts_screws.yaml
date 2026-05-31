@@ -1,0 +1,53 @@
+# Bolts & screws. hardware_type "screw" is inferred from this filename.
+#
+# Each standard carries its catalog metadata (description, designations) and an
+# optional `renders` list — the part instances the CAD pipeline builds. The `id`
+# uppercased is the FreeCAD Fasteners workbench standard name, so it must match
+# that name exactly (e.g. iso7380-1, not iso7380).
+
+standards:
+  - id: iso4762
+    description: "Hexagon socket head cap screws"
+    designations:
+      - { system: ISO, code: "4762" }
+      - { system: DIN, code: "912" }
+    renders:
+      - size: M4
+        length: 20
+        views: [iso, top, side]
+
+  - id: iso7380-1
+    description: "Fasteners - Button head screws with reduced loadability - Part 1: Hexagon socket button head screws (ISO 7380-1:2022); German version EN ISO 7380-1:2023"
+    designations:
+      - { system: ISO, code: "7380-1" }
+      - { system: DIN, code: "9427" }
+    renders:
+      - size: M4
+        length: 10
+        views: [iso, top, side]
+
+  - id: iso7380-2
+    description: "Fasteners - Button head screws with reduced loadability - Part 2: Hexagon socket button head screws with flange (ISO 7380-2:2022)"
+    designations:
+      - { system: ISO, code: "7380-2" }
+    renders:
+      - size: M4
+        length: 10
+        views: [iso, top, side]
+
+  # Catalog-only for now — no render recipe yet.
+  - id: iso10642
+    description: "Fasteners - Hexagon socket countersunk head screws with reduced loadability"
+    designations:
+      - { system: ISO, code: "10642" }
+      - { system: DIN, code: "7991" }
+
+  # id uppercased = ASMEB18.2.1.6 ("UNC Hex head screws"); .1 is square bolts.
+  - id: asmeb18.2.1.6
+    description: "Hex head screws (UNC) — covers 1/4-20 and other UNC sizes"
+    designations:
+      - { system: ASME, code: "B18.2.1" }
+    renders:
+      - size: 1/4in
+        length: 1
+        views: [iso, side]

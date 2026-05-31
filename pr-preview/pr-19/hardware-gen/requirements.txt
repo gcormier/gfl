@@ -1,0 +1,9 @@
+# Minimal runtime requirements for hardware-gen.
+# Install with:  uv pip install -r requirements.txt
+#
+# FreeCAD is NOT listed here — install it via your OS package manager or conda:
+#   Ubuntu/Debian:  sudo apt install freecad
+#   Conda:          conda install -c conda-forge freecad
+#   See: https://www.freecad.org/downloads.php
+
+PyYAML>=6.0

@@ -1,0 +1,29 @@
+# Nuts. hardware_type "nut" is inferred from this filename.
+
+standards:
+  - id: iso4032
+    description: "Fasteners - Hexagon regular nuts (style 1)"
+    designations:
+      - { system: ISO, code: "4032" }
+      - { system: DIN, code: "934" }
+    renders:
+      - size: M8
+        views: [iso, top]
+
+  - id: iso10511
+    description: "Fasteners - Prevailing torque hexagon nuts - Thin nuts (with non-metallic insert)"
+    designations:
+      - { system: ISO, code: "10511" }
+      - { system: DIN, code: "985" }
+    renders:
+      - size: M8
+        views: [iso, top]
+
+  # id uppercased = ASMEB18.2.2.4A ("UNC Hexagon nuts"); .1A is thin machine-screw nuts.
+  - id: asmeb18.2.2.4a
+    description: "Hexagon nuts (UNC) — covers 1/4-20 and other UNC sizes"
+    designations:
+      - { system: ASME, code: "B18.2.2" }
+    renders:
+      - size: 1/4in
+        views: [iso, top]

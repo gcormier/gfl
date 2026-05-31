@@ -1,0 +1,47 @@
+# Standoffs, inserts, pins, clips, and anything else that doesn't belong in
+# bolts_screws, nuts, or washers goes here.
+#
+# hardware_type is NOT inferred from this filename — entries here are
+# heterogeneous, so each standard must declare its own `hardware_type`.
+
+standards:
+  # hardware_type is required for every entry in this file (it cannot be
+  # inferred from the filename).  Entries here can declare any hardware_type —
+  # the variety below is intentional, to illustrate that misc.yaml is the home
+  # for anything that doesn't belong in the four typed files.
+
+  # ── Cylindrical / dowel pins ──────────────────────────────────────────────
+  # Catalog-only for now; FreeCAD pin diameter syntax (e.g. "3 mm", "6 mm")
+  # differs from threaded fasteners and needs verification before adding renders.
+  - id: iso8734
+    description: "Cylindrical pins, unhardened steel and austenitic stainless steel (dowel pins)"
+    hardware_type: pin
+    designations:
+      - { system: ISO, code: "8734" }
+      - { system: DIN, code: "7" }
+
+  # ── Spring / roll pins ────────────────────────────────────────────────────
+  - id: iso8752
+    description: "Spring type straight pins, slotted, heavy duty (roll pins)"
+    hardware_type: pin
+    designations:
+      - { system: ISO, code: "8752" }
+      - { system: DIN, code: "1481" }
+    renders:
+      - size: 6 mm
+        views: [iso]
+  # ── Wing nuts ─────────────────────────────────────────────────────────────
+  # hardware_type overrides the default — this is a nut, but it lives in misc
+  # because it is a distinct form factor from the standard hex nuts in nuts.yaml.
+  - id: din315
+    description: "Wing nuts"
+    hardware_type: nut
+    designations:
+      - { system: DIN, code: "315" }
+
+  # ── E-clips / retaining rings ─────────────────────────────────────────────
+  - id: din6799
+    description: "Washers for clevis pins — E-type retaining rings (E-clips)"
+    hardware_type: clip
+    designations:
+      - { system: DIN, code: "6799" }

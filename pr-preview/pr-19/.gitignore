@@ -1,0 +1,96 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.pycover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*~
+*.bak
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Local debug
+localdebug/
+
+# hardware-gen pipeline artifacts (generated)
+# build/ (STEP solids) is not source-controlled, but output/*.svg IS committed
+# so GitHub Pages can serve the rendered geometry (see agents.md CI/CD section).
+hardware-gen/build/
+hardware-gen/output/*
+!hardware-gen/output/*.svg
+hardware-gen/.venv/
+hardware-gen/.uv-cache/
+
+# Generated catalogs — built at deploy time (pages.yml) from their sources
+# (hardware-gen/config/*.yaml, images/custom/*.svg). Never edit or commit by hand.
+/standards.json
+/custom-icons.json
+
+# Web version — written at deploy time by pages.yml (date+short-sha). Display-only
+# and never hand-authored, so it's not tracked (would be a merge surface). Local
+# dev simply has no VERSION file; contribute.html's fetch fails gracefully.
+/VERSION
