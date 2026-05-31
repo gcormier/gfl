@@ -156,7 +156,7 @@ function _traceRegion(threshold, epsilon) {
     numberofcolors: 2,
     colorsampling:  2,      // sample palette from actual image data (not a fixed random palette)
     mincolorratio:  0,
-    pathomit:       8,      // min path nodes to keep (not pixel area — keep default small value)
+    pathomit:       4,      // min path nodes to keep — lowered from 8 to preserve small detail rings
     ltres:          0.5,
     qtres:          0.5,
     strokewidth:    0,
@@ -172,8 +172,8 @@ function _traceRegion(threshold, epsilon) {
   let paths = _parseDarkPaths(svgStr);
   console.log('[image-trace] parseDarkPaths returned', paths.length, 'paths');
 
-  // Drop tiny paths (noise, dimension arrows, text)
-  const minArea = iw * ih * 0.001;
+  // Drop tiny paths (noise artifacts) — threshold lowered to preserve inner ring details
+  const minArea = iw * ih * 0.0002;
   const areas = paths.map(p => _polyArea(p));
   console.log('[image-trace] path areas (top 10):', [...areas].sort((a,b)=>b-a).slice(0,10).map(a=>a.toFixed(1)));
   const beforeFilter = paths.length;
