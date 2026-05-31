@@ -123,6 +123,9 @@ let _itDragging   = false;
 let _itDragStart  = null;
 let _itLastCode   = null;
 let _itTraceTimer = null;
+let _galleryMeta  = null;  // {id, name, keywords} — set when an SVG with metadata is imported
+
+function getGalleryMeta() { return _galleryMeta; }
 
 // ─── Core: image region → JSCAD code ─────────────────────────────────────────
 
