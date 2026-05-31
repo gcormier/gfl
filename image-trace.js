@@ -330,7 +330,10 @@ function _loadImageElement(img) {
 
   _itOrigCanvas = document.createElement('canvas');
   _itOrigCanvas.width = w; _itOrigCanvas.height = h;
-  _itOrigCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+  const _ictx = _itOrigCanvas.getContext('2d');
+  _ictx.fillStyle = '#ffffff';  // transparent PNGs: fill white so alpha=0 → white, not black
+  _ictx.fillRect(0, 0, w, h);
+  _ictx.drawImage(img, 0, 0, w, h);
   _itSelection = null;
 
   // Size display canvas (max 560px wide, preserve aspect ratio)
