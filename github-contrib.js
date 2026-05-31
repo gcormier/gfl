@@ -29,11 +29,11 @@ function _svgWithMetadata(svgMarkup, name, keywords) {
   return svgMarkup.replace(/(<svg\b[^>]*>)/, `$1${meta}`);
 }
 
-function _buildNewFileUrl(id, content) {
+function _buildNewFileUrl(id, content, isUpdate) {
   const params = new URLSearchParams({
     filename: `${id}.svg`,
     value: content,
-    message: `Add custom icon: ${id}`,
+    message: `${isUpdate ? 'Update' : 'Add'} custom icon: ${id}`,
     description: 'Contributed via the GFL in-browser image editor.',
   });
   return `https://github.com/${GH_ORIGIN}/new/${GH_BRANCH}/images/custom?${params.toString()}`;
@@ -53,8 +53,29 @@ function openContribModal(svgMarkup) {
   const errEl = document.getElementById('contribErrorMsg');
   if (errEl) errEl.textContent = '';
 
-  overlay.hidden = false;
+  // Pre-fill fields and adjust title when editing an existing gallery icon
+  const meta = typeof getGalleryMeta === 'function' ? getGalleryMeta() : null;
+  const titleEl = document.getElementById('contribModalTitle');
   const nameInput = document.getElementById('contribNameInput');
+  const kwInput   = document.getElementById('contribKeywordsInput');
+  const idInput   = document.getElementById('contribStdIdInput');
+  const hintEl    = document.getElementById('contribHintNew');
+
+  if (meta) {
+    if (titleEl)   titleEl.textContent = 'Update Gallery Icon';
+    if (nameInput) nameInput.value = meta.name;
+    if (kwInput)   kwInput.value   = meta.keywords;
+    if (idInput)   idInput.value   = meta.id;
+    if (hintEl)    hintEl.textContent = 'Clicking Open on GitHub opens a tab pre-filled with the updated SVG. GitHub will offer to fork the repo and open a pull request replacing the existing file — no authentication required here.';
+  } else {
+    if (titleEl) titleEl.textContent = 'Contribute to Gallery as PR';
+    if (nameInput) nameInput.value = '';
+    if (kwInput)   kwInput.value   = '';
+    if (idInput)   idInput.value   = '';
+    if (hintEl)    hintEl.textContent = 'Clicking Open on GitHub opens a new tab on github.com with the SVG file pre-filled. GitHub will offer to fork the repo and open a pull request — no authentication required here. Once merged it appears under Icon → Gallery for everyone.';
+  }
+
+  overlay.hidden = false;
   if (nameInput) setTimeout(() => nameInput.focus(), 0);
 }
 
@@ -72,8 +93,10 @@ function submitContribModal() {
   if (!id)       { setErr('Please enter a filename id (letters, digits, dashes).'); return; }
   if (!_pendingSvg) { setErr('No shape to submit — run your design first.'); return; }
 
-  const content = _svgWithMetadata(_pendingSvg, name, keywords);
-  const url = _buildNewFileUrl(id, content);
+  const meta     = typeof getGalleryMeta === 'function' ? getGalleryMeta() : null;
+  const isUpdate = !!(meta && meta.id === id);
+  const content  = _svgWithMetadata(_pendingSvg, name, keywords);
+  const url      = _buildNewFileUrl(id, content, isUpdate);
 
   // URL length cap: GitHub silently rejects very long URLs (~8KB practical limit).
   if (url.length > 7800) {

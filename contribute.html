@@ -64,6 +64,15 @@
           <input type="file" id="itFileInput" accept="image/*" hidden />
         </div>
 
+        <div class="it-gallery-load">
+          <span class="it-or-sep">or edit an existing gallery icon</span>
+          <div class="it-gallery-row">
+            <input type="text" id="itGalleryIdInput" class="it-gallery-id-input" placeholder="icon-id  (e.g. ferrule)" autocomplete="off" spellcheck="false" />
+            <button type="button" id="itGalleryLoadBtn" class="btn-secondary jscad-btn">Load →</button>
+          </div>
+          <div id="itGalleryStatus" class="jscad-status"></div>
+        </div>
+
         <div id="itImageArea" hidden>
           <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
           <p class="hint-text it-sel-hint">Drag on the image above to select a region — or leave unselected to trace the whole image</p>

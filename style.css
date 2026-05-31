@@ -1537,6 +1537,40 @@ html.contrib-page .jscad-preview-canvas             { max-height: 220px; }
   margin-left: 4px;
 }
 
+.it-gallery-load {
+  margin-top: 12px;
+}
+
+.it-or-sep {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+}
+
+.it-gallery-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.it-gallery-id-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: var(--bg-elev);
+  color: var(--ink-1);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+}
+
+.it-gallery-id-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
 .it-drop-zone {
   display: flex;
   flex-direction: column;

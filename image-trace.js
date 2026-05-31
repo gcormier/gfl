@@ -123,6 +123,9 @@ let _itDragging   = false;
 let _itDragStart  = null;
 let _itLastCode   = null;
 let _itTraceTimer = null;
+let _galleryMeta  = null;  // {id, name, keywords} when editing an existing icon
+
+function getGalleryMeta() { return _galleryMeta; }
 
 // ─── Core: image region → JSCAD code ─────────────────────────────────────────
 
@@ -345,11 +348,47 @@ function _loadImageElement(img) {
 
 function _loadFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
+  _galleryMeta = null; // fresh upload — not editing an existing icon
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload  = () => { _loadImageElement(img); URL.revokeObjectURL(url); };
   img.onerror = () =>   URL.revokeObjectURL(url);
   img.src = url;
+}
+
+// ─── Load existing gallery icon for editing ───────────────────────────────────
+
+async function _loadGalleryIcon(id) {
+  const statusEl = document.getElementById('itGalleryStatus');
+  const setStatus = (msg, cls) => {
+    statusEl.textContent = msg;
+    statusEl.className = 'jscad-status' + (cls ? ' ' + cls : '');
+  };
+
+  id = id.trim().replace(/\.svg$/i, '');
+  if (!id) { setStatus('Enter an icon ID', 'error'); return; }
+
+  setStatus('Loading…', '');
+  try {
+    const url = assetUrl(`images/custom/${id}.svg`);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Icon "${id}" not found (${res.status})`);
+    const text = await res.text();
+
+    const name     = (text.match(/<title>([^<]*)<\/title>/)?.[1] || '').trim();
+    const keywords = (text.match(/<desc>([^<]*)<\/desc>/)?.[1] || '').trim();
+    _galleryMeta = { id, name, keywords };
+
+    const blob   = new Blob([text], { type: 'image/svg+xml' });
+    const imgUrl = URL.createObjectURL(blob);
+    const img    = new Image();
+    img.onload  = () => { _loadImageElement(img); URL.revokeObjectURL(imgUrl); setStatus(`Loaded: ${name || id}`, 'ok'); };
+    img.onerror = () => { URL.revokeObjectURL(imgUrl); setStatus('Failed to render SVG', 'error'); };
+    img.src = imgUrl;
+  } catch (err) {
+    _galleryMeta = null;
+    setStatus('✗ ' + err.message, 'error');
+  }
 }
 
 // ─── Public init ─────────────────────────────────────────────────────────────
@@ -418,10 +457,20 @@ function initImageTracer() {
 
   // Clear
   document.getElementById('itClearBtn').addEventListener('click', () => {
-    _itOrigCanvas = _itSelection = _itLastCode = null;
+    _itOrigCanvas = _itSelection = _itLastCode = _galleryMeta = null;
     document.getElementById('itDropZone').hidden  = false;
     document.getElementById('itImageArea').hidden = true;
     document.getElementById('itInsertBtn').disabled = true;
+    const gs = document.getElementById('itGalleryStatus');
+    if (gs) { gs.textContent = ''; gs.className = 'jscad-status'; }
+    const gi = document.getElementById('itGalleryIdInput');
+    if (gi) gi.value = '';
     _setTraceStatus('', '');
   });
+
+  // Load existing gallery icon
+  const galleryLoadBtn = document.getElementById('itGalleryLoadBtn');
+  const galleryIdInput = document.getElementById('itGalleryIdInput');
+  galleryLoadBtn?.addEventListener('click', () => _loadGalleryIcon(galleryIdInput.value));
+  galleryIdInput?.addEventListener('keydown', e => { if (e.key === 'Enter') _loadGalleryIcon(galleryIdInput.value); });
 }
