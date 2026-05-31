@@ -20,9 +20,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -31,9 +29,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -71,11 +66,14 @@ jobs:
           printf '%s' "$VER" > VERSION
           sed -i "s/const APP_VERSION = '[^']*';/const APP_VERSION = '$VER';/" app.js
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
+      # Deploy to the gh-pages branch. clean-exclude preserves any PR preview
+      # subfolders that pr-preview.yml has written under pr-preview/; without it,
+      # every main-branch deploy would wipe active previews.
+      - name: Deploy to gh-pages branch
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: .
-
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          branch: gh-pages
+          folder: .
+          clean: true
+          clean-exclude: |
+            pr-preview/
