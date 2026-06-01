@@ -734,7 +734,7 @@ function onLabelHeightChange() {
 function updateLabelPxInfo() {
   const scale = getPrintScale();
   const h = getLabelHeight();
-  const pw = (LABEL_WIDTH_MM + LABEL_MARGIN_LEFT * 2) * scale;
+  const pw = LABEL_WIDTH_MM * scale;
   const ph = (h + LABEL_MARGIN_TOP * 2) * scale;
   const el = document.getElementById('labelPxInfo');
   if (el) el.textContent = `${Math.round(pw)} × ${Math.round(ph)} px @ ${scale} px/mm`;
