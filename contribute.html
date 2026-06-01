@@ -72,26 +72,30 @@
         </div>
 
         <div id="itImageArea" hidden>
-          <div class="it-sliders">
-            <div class="it-slider-row">
-              <label class="it-slider-label" for="itThresholdSlider">Threshold</label>
-              <input type="range" id="itThresholdSlider" class="it-slider" min="10" max="245" value="128" />
-              <span class="it-slider-val" id="itThresholdVal">128</span>
+          <div class="it-trace-columns">
+            <div class="it-trace-left">
+              <div class="it-sliders">
+                <div class="it-slider-row">
+                  <label class="it-slider-label" for="itThresholdSlider">Threshold</label>
+                  <input type="range" id="itThresholdSlider" class="it-slider" min="10" max="245" value="128" />
+                  <span class="it-slider-val" id="itThresholdVal">128</span>
+                </div>
+                <div class="it-slider-row">
+                  <label class="it-slider-label" for="itEpsilonSlider">Simplify</label>
+                  <input type="range" id="itEpsilonSlider" class="it-slider" min="0" max="30" value="0" step="0.5" />
+                  <span class="it-slider-val" id="itEpsilonVal">0</span>
+                </div>
+              </div>
+              <div class="jscad-toolbar">
+                <button type="button" id="itClearBtn" class="btn-secondary jscad-btn">Clear image</button>
+              </div>
+              <div id="itTraceStatus" class="jscad-status"></div>
             </div>
-            <div class="it-slider-row">
-              <label class="it-slider-label" for="itEpsilonSlider">Simplify</label>
-              <input type="range" id="itEpsilonSlider" class="it-slider" min="0" max="30" value="0" step="0.5" />
-              <span class="it-slider-val" id="itEpsilonVal">0</span>
+            <div class="it-trace-right">
+              <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
+              <p class="hint-text it-sel-hint">Drag to select a region — or leave unselected to trace the whole image</p>
             </div>
           </div>
-
-          <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
-          <p class="hint-text it-sel-hint">Drag on the image above to select a region — or leave unselected to trace the whole image</p>
-
-          <div class="jscad-toolbar">
-            <button type="button" id="itClearBtn" class="btn-secondary jscad-btn">Clear image</button>
-          </div>
-          <div id="itTraceStatus" class="jscad-status"></div>
         </div>
       </section>
 
@@ -104,44 +108,73 @@
           Or trace an image above to generate a starting outline.
         </p>
         <div id="jscadEditorWrap" class="jscad-editor-wrap"></div>
-        <div class="jscad-toolbar">
-          <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
-          <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
-          <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Contribute to Gallery…</button>
-        </div>
-        <div class="jscad-render-opts">
-          <div class="jscad-mode-btns">
-            <button type="button" id="jscadModeSolid"   class="jscad-mode-btn active">Solid</button>
-            <button type="button" id="jscadModeOutline" class="jscad-mode-btn">Outline</button>
+        <div class="jscad-below-row">
+          <div class="jscad-below-controls">
+            <div class="jscad-toolbar">
+              <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
+              <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
+              <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Contribute to Gallery…</button>
+            </div>
+            <div class="jscad-render-opts">
+              <div class="jscad-mode-btns">
+                <button type="button" id="jscadModeSolid"   class="jscad-mode-btn active">Solid</button>
+                <button type="button" id="jscadModeOutline" class="jscad-mode-btn">Outline</button>
+              </div>
+              <div class="it-slider-row" id="jscadStrokeRow" hidden>
+                <label class="it-slider-label" for="jscadStrokeSlider">Stroke</label>
+                <input type="range" id="jscadStrokeSlider" class="it-slider" min="0.05" max="2" value="0.3" step="0.05" />
+                <span class="it-slider-val" id="jscadStrokeVal">0.30</span>
+              </div>
+            </div>
+            <div id="jscadStatus" class="jscad-status"></div>
           </div>
-          <div class="it-slider-row" id="jscadStrokeRow" hidden>
-            <label class="it-slider-label" for="jscadStrokeSlider">Stroke</label>
-            <input type="range" id="jscadStrokeSlider" class="it-slider" min="0.05" max="2" value="0.3" step="0.05" />
-            <span class="it-slider-val" id="jscadStrokeVal">0.30</span>
+          <div class="jscad-below-preview">
+            <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
           </div>
         </div>
-        <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
-        <div id="jscadStatus" class="jscad-status"></div>
       </section>
 
-      <!-- 02 · How to contribute -->
+      <!-- 02 · Metadata -->
       <section class="cfg-section">
-        <div class="section-hdr"><span class="section-num">02</span> How to contribute</div>
+        <div class="section-hdr"><span class="section-num">02</span> Metadata</div>
+        <p class="hint-text">Fill these in before exporting or contributing — they're embedded in the SVG file so the gallery can search and display your icon correctly.</p>
+        <div class="form-group">
+          <label class="field-label" for="iconMetaName">Name</label>
+          <input type="text" id="iconMetaName" class="contrib-id-input" placeholder="e.g. Hex Wrench" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="field-label" for="iconMetaKeywords">Keywords</label>
+          <input type="text" id="iconMetaKeywords" class="contrib-id-input" placeholder="e.g. tool, allen, hardware" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="field-label" for="iconMetaId">Filename ID</label>
+          <input type="text" id="iconMetaId" class="contrib-id-input" placeholder="e.g. hex-wrench" autocomplete="off" />
+          <span class="hint-text" style="font-size:0.78rem;margin-top:2px">Lowercase letters, digits, dashes — becomes <code>images/custom/&lt;id&gt;.svg</code></span>
+        </div>
+      </section>
+
+      <!-- 03 · How to contribute -->
+      <section class="cfg-section">
+        <div class="section-hdr"><span class="section-num">03</span> How to contribute</div>
         <ol class="contrib-guide-steps">
           <li>
             <strong>Design your icon</strong> — trace an image above, or edit the JSCad code and click
             <strong>▶ Run</strong> to preview. <code>main()</code> must return a single 2D shape.
           </li>
           <li>
-            <strong>Submit a PR</strong> — click <strong>Contribute to Gallery…</strong>, give it a name,
-            keywords, and a filename id (e.g. <code>hex-wrench</code>), then <strong>Open on GitHub →</strong>.
-            GitHub pre-fills a single SVG file under <code>images/custom/</code> and walks you through forking
-            &amp; opening a pull request — no CLI or authentication needed. Once merged, it appears for everyone
-            under <strong>Icon → Gallery</strong>.
+            <strong>Fill in metadata</strong> — enter a name, keywords, and filename ID in the
+            <strong>Metadata</strong> section above so your icon is searchable.
+          </li>
+          <li>
+            <strong>Submit a PR</strong> — click <strong>Contribute to Gallery…</strong>, then
+            <strong>Open on GitHub →</strong>. GitHub pre-fills a single SVG file under
+            <code>images/custom/</code> and walks you through forking &amp; opening a pull request —
+            no CLI or authentication needed. Once merged, it appears for everyone under
+            <strong>Icon → Gallery</strong>.
           </li>
           <li>
             <strong>Use it now</strong> — while your PR is in review, click <strong>Export SVG ↓</strong>
-            to download your icon as a vector file. Then on the main app go to
+            to download your icon (metadata already embedded). Then on the main app go to
             <strong>Icon → Upload SVG…</strong> to use it immediately in your current session.
           </li>
         </ol>
@@ -159,37 +192,14 @@
 <div id="contribOverlay" class="shortcuts-overlay" hidden>
   <div class="shortcuts-dialog contrib-dialog">
     <div class="shortcuts-hdr">
-      <span class="shortcuts-title" id="contribModalTitle">Contribute to Gallery as PR</span>
+      <span class="shortcuts-title">Contribute to Gallery as PR</span>
       <button type="button" onclick="closeContribModal()" class="shortcuts-close">×</button>
     </div>
 
-    <div id="contribNameRow">
-      <p class="contrib-step-text">
-        <b>Name</b> — shown in the icon picker.
-      </p>
-      <input type="text" id="contribNameInput" class="contrib-id-input" placeholder="e.g. Hex Wrench" autocomplete="off" />
-    </div>
-
-    <div id="contribKeywordsRow">
-      <p class="contrib-step-text">
-        <b>Keywords</b> — comma-separated terms people can search by.
-      </p>
-      <input type="text" id="contribKeywordsInput" class="contrib-id-input" placeholder="e.g. tool, allen, hardware" autocomplete="off" />
-    </div>
-
-    <div id="contribIdRow">
-      <p class="contrib-step-text">
-        <b>Filename id</b> — lowercase letters, digits, dashes.
-        It becomes <code>images/custom/&lt;id&gt;.svg</code>.
-      </p>
-      <input type="text" id="contribStdIdInput" class="contrib-id-input" placeholder="e.g. hex-wrench" autocomplete="off" />
-    </div>
-
-    <p class="contrib-step-text hint-text" id="contribHintNew">
-      Clicking <b>Open on GitHub</b> opens a new tab on github.com with the SVG file
-      pre-filled. GitHub will offer to fork the repo and open a pull request — no
-      authentication required here. Once merged it appears under <b>Icon → Gallery</b>
-      for everyone.
+    <p class="contrib-step-text hint-text">
+      Clicking <b>Open on GitHub</b> opens a new tab with the SVG pre-filled. GitHub
+      will offer to fork the repo and open a pull request — no authentication required.
+      Once merged it appears under <b>Icon → Gallery</b> for everyone.
     </p>
 
     <p class="contrib-step-text contrib-error" id="contribErrorMsg"></p>
