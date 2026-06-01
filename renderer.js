@@ -67,7 +67,7 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
       ctx.save();
       ctx.fillStyle = '#000000';
       ctx.translate(x * scale, y * scale);
-      ctx.scale((w * scale) / 24, (h * scale) / 24);
+      ctx.scale((w * scale) / (content.iconVbw ?? 24), (h * scale) / (content.iconVbh ?? 24));
       ctx.fill(new Path2D(content.iconPath));
       ctx.restore();
     } else {
@@ -174,7 +174,7 @@ async function computeLayout(ctx, content, pw, ph, scale) {
   if (hasVisual) {
     let ar;
     if (hasIcon) {
-      ar = 1;  // MDI/custom icons are square (24×24 viewBox)
+      ar = (content.iconVbw ?? 24) / (content.iconVbh ?? 24);
     } else {
       // Combined width-to-height of all selected views placed side by side,
       // so the image box is wide enough to hold them without overlap.
