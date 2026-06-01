@@ -156,20 +156,23 @@ function _outlinesToSvg(outlines, bbox) {
   const { minX, minY, maxX, maxY } = bbox;
   const w = maxX - minX;
   const h = maxY - minY;
+  // Normalise to 24×24 (MDI standard) so exported icons have a consistent viewBox.
+  const sx = w > 0 ? 24 / w : 1;
+  const sy = h > 0 ? 24 / h : 1;
   let d = '';
   for (const outline of outlines) {
     if (outline.length < 2) continue;
-    // JSCad is Y-up; SVG is Y-down — flip: svg_y = h - (jscad_y - minY)
-    d += `M${(outline[0][0] - minX).toFixed(4)},${(h - (outline[0][1] - minY)).toFixed(4)}`;
+    // JSCad is Y-up; SVG is Y-down — flip: svg_y = 24 - (jscad_y - minY) * sy
+    d += `M${((outline[0][0] - minX) * sx).toFixed(4)},${(24 - (outline[0][1] - minY) * sy).toFixed(4)}`;
     for (let i = 1; i < outline.length; i++) {
-      d += ` L${(outline[i][0] - minX).toFixed(4)},${(h - (outline[i][1] - minY)).toFixed(4)}`;
+      d += ` L${((outline[i][0] - minX) * sx).toFixed(4)},${(24 - (outline[i][1] - minY) * sy).toFixed(4)}`;
     }
     d += ' Z';
   }
   if (_renderMode === 'outline') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(4)} ${h.toFixed(4)}">\n  <path d="${d}" fill="none" stroke="#000000" stroke-width="${_strokeWidth.toFixed(3)}" stroke-linejoin="round" stroke-linecap="round"/>\n</svg>\n`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n  <path d="${d}" fill="none" stroke="#000000" stroke-width="${_strokeWidth.toFixed(3)}" stroke-linejoin="round" stroke-linecap="round"/>\n</svg>\n`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(4)} ${h.toFixed(4)}">\n  <path d="${d}" fill="#000000" fill-rule="evenodd"/>\n</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n  <path d="${d}" fill="#000000" fill-rule="evenodd"/>\n</svg>\n`;
 }
 
 function _exportSvg() {
