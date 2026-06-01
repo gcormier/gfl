@@ -1674,6 +1674,37 @@ html.contrib-page .jscad-preview-canvas             { max-height: none; }
   .jscad-below-controls { flex: none; width: 100%; }
 }
 
+/* ─── Collapsible Section (details/summary) ─────────────────────────────────── */
+
+.cfg-details {
+  width: 100%;
+}
+
+.cfg-summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;      /* Firefox */
+}
+.cfg-summary::-webkit-details-marker { display: none; }  /* Safari/Chrome */
+.cfg-summary::marker               { display: none; }    /* standards */
+
+.cfg-chevron {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.cfg-chevron::after { content: '▸'; }
+details[open] > .cfg-summary .cfg-chevron { transform: rotate(90deg); }
+
+.cfg-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
+
 /* ─── Crop-to-Square UI ──────────────────────────────────────────────────────── */
 
 .crop-section {
