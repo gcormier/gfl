@@ -369,7 +369,8 @@ async function onSvgUpload(e) {
   const text = await file.text();
   const m = text.match(/\sd="([^"]+)"/);
   if (!m) { alert('No path data found in this SVG file.'); e.target.value = ''; return; }
-  selectedMdiIcon = { type: 'svg', name: file.name.replace(/\.svg$/i, ''), path: m[1] };
+  const vb = text.match(/viewBox="[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)"/);
+  selectedMdiIcon = { type: 'svg', name: file.name.replace(/\.svg$/i, ''), path: m[1], vbw: vb ? parseFloat(vb[1]) : 24, vbh: vb ? parseFloat(vb[2]) : 24 };
   showSelectedMdiIcon();
   updateStarButtons();
   scheduleRender();
@@ -390,6 +391,9 @@ async function loadCustomIcons() {
         const text = await svgRes.text();
         const m = text.match(/\sd="([^"]+)"/);
         if (m) icon.path = m[1];
+        const vb = text.match(/viewBox="[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)"/);
+        icon.vbw = vb ? parseFloat(vb[1]) : 24;
+        icon.vbh = vb ? parseFloat(vb[2]) : 24;
       } catch { /* SVG fetch failed — icon will be skipped */ }
       return icon;
     }));
@@ -422,7 +426,7 @@ function renderGalleryList(filter) {
     cv.width = 28; cv.height = 28;
     const ctx = cv.getContext('2d');
     ctx.fillStyle = '#000';
-    ctx.setTransform(28 / 24, 0, 0, 28 / 24, 0, 0);
+    ctx.setTransform(28 / (icon.vbw ?? 24), 0, 0, 28 / (icon.vbh ?? 24), 0, 0);
     try { ctx.fill(new Path2D(icon.path)); } catch { /* bad path */ }
     ctx.resetTransform();
     const label = document.createElement('span');
@@ -444,7 +448,7 @@ function onCustomIconSearch(e) {
 }
 
 function selectCustomIcon(icon) {
-  selectedCustomIcon = { id: icon.id, name: icon.name, path: icon.path };
+  selectedCustomIcon = { id: icon.id, name: icon.name, path: icon.path, vbw: icon.vbw ?? 24, vbh: icon.vbh ?? 24 };
   showSelectedCustomIcon();
   scheduleRender();
 }
@@ -459,7 +463,7 @@ function showSelectedCustomIcon() {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, 36, 36);
   ctx.fillStyle = '#000';
-  ctx.setTransform(36 / 24, 0, 0, 36 / 24, 0, 0);
+  ctx.setTransform(36 / (selectedCustomIcon.vbw ?? 24), 0, 0, 36 / (selectedCustomIcon.vbh ?? 24), 0, 0);
   try { ctx.fill(new Path2D(selectedCustomIcon.path)); } catch { /* bad path */ }
   ctx.resetTransform();
   document.getElementById('selectedCustomIconDisplay').hidden = false;
@@ -522,6 +526,8 @@ function buildLabelContent() {
     secondaryText,
     imageSource: imgSrc,
     iconPath: (imgSrc === 'mdi' || imgSrc === 'custom') ? (activeIcon?.path ?? null) : null,
+    iconVbw: (imgSrc === 'mdi' || imgSrc === 'custom') ? (activeIcon?.vbw ?? 24) : 24,
+    iconVbh: (imgSrc === 'mdi' || imgSrc === 'custom') ? (activeIcon?.vbh ?? 24) : 24,
     iconPosition,
     showQRCode: document.getElementById('showQR').checked,
     showMargins: document.getElementById('showMargins').checked,

@@ -1673,3 +1673,68 @@ html.contrib-page .jscad-preview-canvas             { max-height: none; }
   .it-trace-left   { flex: none; width: 100%; }
   .jscad-below-controls { flex: none; width: 100%; }
 }
+
+/* ─── Collapsible Section (details/summary) ─────────────────────────────────── */
+
+.cfg-details {
+  width: 100%;
+}
+
+.cfg-summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;      /* Firefox */
+}
+.cfg-summary::-webkit-details-marker { display: none; }  /* Safari/Chrome */
+.cfg-summary::marker               { display: none; }    /* standards */
+
+.cfg-chevron {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  transition: transform 0.15s;
+  display: inline-block;
+}
+.cfg-chevron::after { content: '▸'; }
+details[open] > .cfg-summary .cfg-chevron { transform: rotate(90deg); }
+
+.cfg-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+/* ─── Crop-to-Square UI ──────────────────────────────────────────────────────── */
+
+.crop-section {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #fff8e1;
+  border: 1px solid #e8c53a;
+  border-radius: 6px;
+}
+
+.crop-banner {
+  font-size: 0.82rem;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.crop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crop-align-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.crop-slider {
+  flex: 1;
+  min-width: 80px;
+}

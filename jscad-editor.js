@@ -86,6 +86,95 @@ function renderPreview(canvas, outlines, bbox) {
     ctx.fill(path, 'evenodd');
   }
   ctx.restore();
+
+  if (_cropBbox) _drawCropOverlay(canvas, bbox, _cropBbox);
+}
+
+// ─── Square Crop UI ───────────────────────────────────────────────────────────
+
+function _computeCropBbox(t) {
+  const { minX, minY, maxX, maxY } = _lastResult.bbox;
+  const w = maxX - minX;
+  const h = maxY - minY;
+  const size = Math.min(w, h);
+  if (w >= h) {
+    // Landscape: t=0 → left edge, t=1 → right edge
+    const x0 = minX + (w - size) * t;
+    return { minX: x0, minY, maxX: x0 + size, maxY };
+  } else {
+    // Portrait (JSCAD Y-up): t=0 → top of image (high Y), t=1 → bottom (low Y)
+    const y0 = maxY - size - (h - size) * t;
+    return { minX, minY: y0, maxX, maxY: y0 + size };
+  }
+}
+
+function _drawCropOverlay(canvas, fullBbox, cropBbox) {
+  const { minX, minY, maxX, maxY } = fullBbox;
+  const geoW = maxX - minX;
+  const geoH = maxY - minY;
+  const padding = 8;
+  const availW  = canvas.width  - padding * 2;
+  const availH  = canvas.height - padding * 2;
+  const scale   = Math.min(availW / geoW, availH / geoH);
+  const offX    = padding + (availW - geoW * scale) / 2;
+  const offY    = padding + (availH - geoH * scale) / 2;
+
+  const cL = offX + (cropBbox.minX - minX) * scale;
+  const cR = offX + (cropBbox.maxX - minX) * scale;
+  const cT = offY + (maxY - cropBbox.maxY) * scale;
+  const cB = offY + (maxY - cropBbox.minY) * scale;
+
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.48)';
+  ctx.fillRect(0,    0,    canvas.width, cT);
+  ctx.fillRect(0,    cB,   canvas.width, canvas.height - cB);
+  ctx.fillRect(0,    cT,   cL,           cB - cT);
+  ctx.fillRect(cR,   cT,   canvas.width - cR, cB - cT);
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.strokeRect(cL, cT, cR - cL, cB - cT);
+  ctx.restore();
+}
+
+function _updateCropFromT(t) {
+  _cropT    = t;
+  _cropBbox = _computeCropBbox(t);
+  const slider = document.getElementById('cropSlider');
+  if (slider) slider.value = Math.round(t * 100);
+  const canvas = document.getElementById('jscadPreviewCanvas');
+  if (canvas && _lastResult) renderPreview(canvas, _lastResult.outlines, _lastResult.bbox);
+}
+
+function _checkCrop() {
+  const section = document.getElementById('cropSection');
+  if (!section || !_lastResult) return;
+
+  const { minX, minY, maxX, maxY } = _lastResult.bbox;
+  const w = maxX - minX;
+  const h = maxY - minY;
+  const isSquare = Math.abs(w - h) / Math.max(w, h) < 0.01;
+
+  if (isSquare) {
+    section.hidden = true;
+    _cropBbox = null;
+    return;
+  }
+
+  section.hidden = false;
+  const landscape = w >= h;
+  const btnA = document.getElementById('cropBtnA');
+  const btnC = document.getElementById('cropBtnC');
+  if (btnA) btnA.textContent = landscape ? '← Left' : '↑ Top';
+  if (btnC) btnC.textContent = landscape ? 'Right →' : '↓ Bottom';
+
+  const dim = `${w.toFixed(2)} × ${h.toFixed(2)}`;
+  const el = document.getElementById('cropBannerText');
+  if (el) el.textContent = dim;
+
+  // Reset crop to centre for each new result
+  _updateCropFromT(0.5);
 }
 
 // ─── Editor State ─────────────────────────────────────────────────────────────
@@ -97,6 +186,8 @@ let _runDebounce = null;
 let _renderMode  = 'solid';   // 'solid' | 'outline'
 let _strokeWidth = 0.3;
 let _programmaticEdit = false; // true while the trace sliders write the editor — suppresses the auto-run
+let _cropBbox = null;          // null = no crop; {minX,minY,maxX,maxY} = current square crop region
+let _cropT    = 0.5;           // 0..1 slider position along the non-square axis
 
 const DEFAULT_TEMPLATE = `// JSCad custom-image definition
 // Injected namespaces are available: primitives, booleans, transforms, expansions, hulls
@@ -130,6 +221,7 @@ async function _runAndPreview() {
     const result = await runJscadCode(code);
     _lastResult = result;
     renderPreview(canvas, result.outlines, result.bbox);
+    _checkCrop();
     statusEl.textContent = '✓ OK';
     statusEl.className = 'jscad-status ok';
     if (useBtn)    useBtn.disabled    = false;
@@ -137,6 +229,9 @@ async function _runAndPreview() {
     if (exportBtn) exportBtn.disabled = false;
   } catch (err) {
     _lastResult = null;
+    _cropBbox = null;
+    const section = document.getElementById('cropSection');
+    if (section) section.hidden = true;
     statusEl.textContent = '✗ ' + err.message;
     statusEl.className = 'jscad-status error';
     if (useBtn)    useBtn.disabled    = true;
@@ -156,25 +251,28 @@ function _outlinesToSvg(outlines, bbox) {
   const { minX, minY, maxX, maxY } = bbox;
   const w = maxX - minX;
   const h = maxY - minY;
+  // Normalise to 24×24 (MDI standard) so exported icons have a consistent viewBox.
+  const sx = w > 0 ? 24 / w : 1;
+  const sy = h > 0 ? 24 / h : 1;
   let d = '';
   for (const outline of outlines) {
     if (outline.length < 2) continue;
-    // JSCad is Y-up; SVG is Y-down — flip: svg_y = h - (jscad_y - minY)
-    d += `M${(outline[0][0] - minX).toFixed(4)},${(h - (outline[0][1] - minY)).toFixed(4)}`;
+    // JSCad is Y-up; SVG is Y-down — flip: svg_y = 24 - (jscad_y - minY) * sy
+    d += `M${((outline[0][0] - minX) * sx).toFixed(4)},${(24 - (outline[0][1] - minY) * sy).toFixed(4)}`;
     for (let i = 1; i < outline.length; i++) {
-      d += ` L${(outline[i][0] - minX).toFixed(4)},${(h - (outline[i][1] - minY)).toFixed(4)}`;
+      d += ` L${((outline[i][0] - minX) * sx).toFixed(4)},${(24 - (outline[i][1] - minY) * sy).toFixed(4)}`;
     }
     d += ' Z';
   }
   if (_renderMode === 'outline') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(4)} ${h.toFixed(4)}">\n  <path d="${d}" fill="none" stroke="#000000" stroke-width="${_strokeWidth.toFixed(3)}" stroke-linejoin="round" stroke-linecap="round"/>\n</svg>\n`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n  <path d="${d}" fill="none" stroke="#000000" stroke-width="${_strokeWidth.toFixed(3)}" stroke-linejoin="round" stroke-linecap="round"/>\n</svg>\n`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(4)} ${h.toFixed(4)}">\n  <path d="${d}" fill="#000000" fill-rule="evenodd"/>\n</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n  <path d="${d}" fill="#000000" fill-rule="evenodd"/>\n</svg>\n`;
 }
 
 function _exportSvg() {
   if (!_lastResult) return;
-  let svg = _outlinesToSvg(_lastResult.outlines, _lastResult.bbox);
+  let svg = _outlinesToSvg(_lastResult.outlines, _cropBbox ?? _lastResult.bbox);
 
   // Embed metadata from the inline form fields if provided
   const name     = (document.getElementById('iconMetaName')?.value || '').trim();
@@ -207,6 +305,7 @@ async function previewJscadCode(code) {
     const result = await runJscadCode(code);
     _lastResult = result;
     renderPreview(canvas, result.outlines, result.bbox);
+    _checkCrop();
     statusEl.textContent = '✓ OK';
     statusEl.className = 'jscad-status ok';
     ['jscadUseBtn', 'jscadSubmitBtn', 'jscadExportSvgBtn'].forEach(id => {
@@ -233,6 +332,7 @@ function setDirectPreview(outlines, bbox) {
   const statusEl = document.getElementById('jscadStatus');
   _lastResult = { outlines, bbox };
   if (canvas)   renderPreview(canvas, outlines, bbox);
+  _checkCrop();
   if (statusEl) { statusEl.textContent = '✓ SVG imported'; statusEl.className = 'jscad-status ok'; }
   ['jscadUseBtn', 'jscadSubmitBtn', 'jscadExportSvgBtn'].forEach(id => {
     const el = document.getElementById(id);
@@ -335,13 +435,21 @@ async function initJscadEditor() {
   runBtn.addEventListener('click', _runAndPreview);
   if (useBtn) useBtn.addEventListener('click', _onUseAsIcon);
 
+  // Crop-to-square controls
+  document.getElementById('cropSlider')?.addEventListener('input', e => {
+    _updateCropFromT(+e.target.value / 100);
+  });
+  document.getElementById('cropBtnA')?.addEventListener('click', () => _updateCropFromT(0));
+  document.getElementById('cropBtnB')?.addEventListener('click', () => _updateCropFromT(0.5));
+  document.getElementById('cropBtnC')?.addEventListener('click', () => _updateCropFromT(1));
+
   const exportBtn2 = document.getElementById('jscadExportSvgBtn');
   if (exportBtn2) exportBtn2.addEventListener('click', _exportSvg);
 
   const submitBtn2 = document.getElementById('jscadSubmitBtn');
   submitBtn2.addEventListener('click', () => {
     if (!_lastResult) return;
-    const svg = _outlinesToSvg(_lastResult.outlines, _lastResult.bbox);
+    const svg = _outlinesToSvg(_lastResult.outlines, _cropBbox ?? _lastResult.bbox);
     openContribModal(svg); // defined in github-contrib.js
   });
 

@@ -101,37 +101,60 @@
 
       <!-- 01 · JSCAD Editor -->
       <section class="cfg-section" id="jscadSection">
-        <div class="section-hdr"><span class="section-num">01</span> Design (JSCAD)</div>
-        <p class="hint-text jscad-hint">
-          Write parametric 2D geometry using <code>primitives</code>, <code>booleans</code>,
-          <code>transforms</code>. <code>main()</code> must return a 2D shape (geom2).
-          Or trace an image above to generate a starting outline.
-        </p>
-        <div id="jscadEditorWrap" class="jscad-editor-wrap"></div>
-        <div class="jscad-below-row">
-          <div class="jscad-below-controls">
-            <div class="jscad-toolbar">
-              <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
-              <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
-              <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Contribute to Gallery…</button>
-            </div>
-            <div class="jscad-render-opts">
-              <div class="jscad-mode-btns">
-                <button type="button" id="jscadModeSolid"   class="jscad-mode-btn active">Solid</button>
-                <button type="button" id="jscadModeOutline" class="jscad-mode-btn">Outline</button>
+        <details class="cfg-details">
+          <summary class="section-hdr cfg-summary">
+            <span class="section-num">01</span> Design (JSCAD)
+            <span class="cfg-chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="cfg-details-body">
+            <p class="hint-text jscad-hint">
+              Write parametric 2D geometry using <code>primitives</code>, <code>booleans</code>,
+              <code>transforms</code>. <code>main()</code> must return a 2D shape (geom2).
+              Or trace an image above to generate a starting outline.
+            </p>
+            <div id="jscadEditorWrap" class="jscad-editor-wrap"></div>
+            <div class="jscad-below-row">
+              <div class="jscad-below-controls">
+                <div class="jscad-toolbar">
+                  <button type="button" id="jscadRunBtn" class="btn-secondary jscad-btn">▶ Run</button>
+                  <button type="button" id="jscadExportSvgBtn" class="btn-secondary jscad-btn" disabled>Export SVG ↓</button>
+                  <button type="button" id="jscadSubmitBtn" class="btn-secondary jscad-btn" disabled>Contribute to Gallery…</button>
+                </div>
+                <div class="jscad-render-opts">
+                  <div class="jscad-mode-btns">
+                    <button type="button" id="jscadModeSolid"   class="jscad-mode-btn active">Solid</button>
+                    <button type="button" id="jscadModeOutline" class="jscad-mode-btn">Outline</button>
+                  </div>
+                  <div class="it-slider-row" id="jscadStrokeRow" hidden>
+                    <label class="it-slider-label" for="jscadStrokeSlider">Stroke</label>
+                    <input type="range" id="jscadStrokeSlider" class="it-slider" min="0.05" max="2" value="0.3" step="0.05" />
+                    <span class="it-slider-val" id="jscadStrokeVal">0.30</span>
+                  </div>
+                </div>
+                <div id="jscadStatus" class="jscad-status"></div>
               </div>
-              <div class="it-slider-row" id="jscadStrokeRow" hidden>
-                <label class="it-slider-label" for="jscadStrokeSlider">Stroke</label>
-                <input type="range" id="jscadStrokeSlider" class="it-slider" min="0.05" max="2" value="0.3" step="0.05" />
-                <span class="it-slider-val" id="jscadStrokeVal">0.30</span>
+              <div class="jscad-below-preview">
+                <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
               </div>
             </div>
-            <div id="jscadStatus" class="jscad-status"></div>
+
+            <!-- Crop-to-square UI — shown when the bounding box is not square -->
+            <div id="cropSection" class="crop-section" hidden>
+              <p class="crop-banner">
+                Bounding box is <strong id="cropBannerText"></strong> — not square.
+                Drag the slider or use the buttons to select which square region to export.
+              </p>
+              <div class="crop-row">
+                <div class="crop-align-btns">
+                  <button type="button" id="cropBtnA" class="btn-secondary jscad-btn">← Left</button>
+                  <button type="button" id="cropBtnB" class="btn-secondary jscad-btn">Center</button>
+                  <button type="button" id="cropBtnC" class="btn-secondary jscad-btn">Right →</button>
+                </div>
+                <input type="range" id="cropSlider" class="it-slider crop-slider" min="0" max="100" value="50" />
+              </div>
+            </div>
           </div>
-          <div class="jscad-below-preview">
-            <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
-          </div>
-        </div>
+        </details>
       </section>
 
       <!-- 02 · Metadata -->
