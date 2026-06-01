@@ -187,6 +187,16 @@ function _traceRegion(threshold, epsilon) {
 
   console.log('[image-trace] svgStr length=', svgStr.length, 'preview=', svgStr.slice(0, 400));
 
+  return _svgPathsToJscad(svgStr, iw, ih, epsilon);
+}
+
+// Pure (no DOM, no ImageTracer): turn an imagetracer SVG string into JSCAD
+// source, or null if nothing usable survives. Drops noise by area, simplifies
+// (RDP), orders largest-first, normalises to a centred 10-unit box (Y flipped),
+// then assembles with even-odd nesting. Split out from _traceRegion so the whole
+// trace→code pipeline can be unit-tested without a canvas. iw·ih is the source
+// region area, used only to scale the noise-rejection threshold.
+function _svgPathsToJscad(svgStr, iw, ih, epsilon) {
   let paths = _parseDarkPaths(svgStr);
   console.log('[image-trace] parseDarkPaths returned', paths.length, 'paths');
 
@@ -564,4 +574,15 @@ function initImageTracer() {
     document.getElementById('itSvgImportedArea').hidden = true;
     document.getElementById('itDropZone').hidden = false;
   });
+}
+
+// ─── Node test harness export (no-op in the browser, where `module` is undefined) ─
+// Exposes the pure, DOM-free helpers so tests/image-trace.test.js can import them.
+// Guarded so it never runs on GitHub Pages — keeps this a plain browser script.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    _pathDToSubpaths, _parseDarkPaths, _bezierPts, _rdp,
+    _polyArea, _polyCentroid, _pointInPoly,
+    _svgPathsToJscad, _toJscad,
+  };
 }

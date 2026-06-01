@@ -298,8 +298,10 @@ skip and the `gate` still reports green, so it never gets in `hardware-gen.yml`'
   (`if: always()`) is the required check and passes when the others passed or skipped.
 - **Jobs** (parallel, no FreeCAD, no heavy deps; skipped unless `changes.code == 'true'`):
   1. **`js`** — `node --check` on every root `*.js`. Parses (doesn't execute) each module,
-     catching syntax errors — including the web worker — before they ship. No build step,
-     no lint config; the repo is intentionally build-free.
+     catching syntax errors — including the web worker — before they ship. Then runs
+     `node --test tests/*.test.js` — unit tests for the pure image-trace pipeline via Node's
+     built-in runner (`node:test`/`node:assert`). No build step, no lint config, no test
+     framework or dependencies; the repo is intentionally build-free.
   2. **`print-agent`** — `uvx ruff check --select F,B print-agent/agent.py`. Pyflakes +
      bugbear only (undefined names, unused imports, likely bugs) — **not** style/modernization
      (E/UP/I), so it won't retroactively fail the script over intentional compact style. Lint
