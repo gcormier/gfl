@@ -65,6 +65,9 @@ async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
     if (content.iconPath) {
       const { x, y, w, h } = layout.image;
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(x * scale, y * scale, w * scale, h * scale);
+      ctx.clip();
       ctx.fillStyle = '#000000';
       ctx.translate(x * scale, y * scale);
       ctx.scale((w * scale) / (content.iconVbw ?? 24), (h * scale) / (content.iconVbh ?? 24));

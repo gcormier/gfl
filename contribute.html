@@ -132,6 +132,22 @@
             <canvas id="jscadPreviewCanvas" class="jscad-preview-canvas"></canvas>
           </div>
         </div>
+
+        <!-- Crop-to-square UI — shown when the bounding box is not square -->
+        <div id="cropSection" class="crop-section" hidden>
+          <p class="crop-banner">
+            Bounding box is <strong id="cropBannerText"></strong> — not square.
+            Drag the slider or use the buttons to select which square region to export.
+          </p>
+          <div class="crop-row">
+            <div class="crop-align-btns">
+              <button type="button" id="cropBtnA" class="btn-secondary jscad-btn">← Left</button>
+              <button type="button" id="cropBtnB" class="btn-secondary jscad-btn">Center</button>
+              <button type="button" id="cropBtnC" class="btn-secondary jscad-btn">Right →</button>
+            </div>
+            <input type="range" id="cropSlider" class="it-slider crop-slider" min="0" max="100" value="50" />
+          </div>
+        </div>
       </section>
 
       <!-- 02 · Metadata -->

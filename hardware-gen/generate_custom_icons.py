@@ -72,6 +72,18 @@ def _parse_icon(path: Path) -> dict[str, Any]:
     if not has_path:
         raise IconError(f"{path.name}: contains no <path d=\"…\"> element.")
 
+    vb = (root.get("viewBox") or "").split()
+    if len(vb) == 4:
+        try:
+            vb_w, vb_h = float(vb[2]), float(vb[3])
+            if abs(vb_w - vb_h) > 0.5:
+                raise IconError(
+                    f"{path.name}: viewBox is not square ({vb_w} × {vb_h}). "
+                    "Use the contribute page to export a 24×24 viewBox."
+                )
+        except ValueError:
+            pass  # non-numeric viewBox — skip check
+
     return {"id": stem, "name": name, "file": path.name, "tags": tags}
 
 

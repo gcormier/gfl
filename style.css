@@ -1673,3 +1673,37 @@ html.contrib-page .jscad-preview-canvas             { max-height: none; }
   .it-trace-left   { flex: none; width: 100%; }
   .jscad-below-controls { flex: none; width: 100%; }
 }
+
+/* ─── Crop-to-Square UI ──────────────────────────────────────────────────────── */
+
+.crop-section {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #fff8e1;
+  border: 1px solid #e8c53a;
+  border-radius: 6px;
+}
+
+.crop-banner {
+  font-size: 0.82rem;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.crop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crop-align-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.crop-slider {
+  flex: 1;
+  min-width: 80px;
+}
