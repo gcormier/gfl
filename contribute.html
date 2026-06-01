@@ -53,7 +53,7 @@
       <!-- 00 · Generate from Image -->
       <section class="cfg-section" id="imageTraceSection">
         <div class="section-hdr"><span class="section-num">00</span> Generate from Image <span class="it-optional">(optional)</span></div>
-        <p class="hint-text">Drop, browse, or paste an engineering drawing to trace a starting JSCAD polygon. Drag on the image to select the region to trace.</p>
+        <p class="hint-text">Drop, browse, or paste an engineering drawing to trace a starting JSCAD polygon — the editor below fills in live as you adjust the sliders. Drag on the image to select the region to trace.</p>
 
         <div id="itDropZone" class="it-drop-zone">
           <svg class="it-drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -89,7 +89,6 @@
           </div>
 
           <div class="jscad-toolbar">
-            <button type="button" id="itInsertBtn" class="btn-primary jscad-btn" disabled>Insert into Editor ↓</button>
             <button type="button" id="itClearBtn" class="btn-secondary jscad-btn">Clear image</button>
           </div>
           <div id="itTraceStatus" class="jscad-status"></div>

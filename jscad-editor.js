@@ -96,6 +96,7 @@ let _lastResult = null;       // { outlines, bbox } of most recent successful ru
 let _runDebounce = null;
 let _renderMode  = 'solid';   // 'solid' | 'outline'
 let _strokeWidth = 0.3;
+let _programmaticEdit = false; // true while the trace sliders write the editor — suppresses the auto-run
 
 const DEFAULT_TEMPLATE = `// JSCad custom-image definition
 // Injected namespaces are available: primitives, booleans, transforms, expansions, hulls
@@ -202,6 +203,17 @@ async function previewJscadCode(code) {
   } catch { /* keep existing preview on trace failure */ }
 }
 
+// Live-sync from the image-trace sliders. Makes the editor the single source of
+// truth — the editor text always reflects what the preview shows — while still
+// rendering immediately. The editor write is flagged programmatic so it does not
+// kick off a second debounced run on top of the preview we render here.
+function setEditorCodeFromTrace(code) {
+  _programmaticEdit = true;
+  try { if (_editorSetValue) _editorSetValue(code); }
+  finally { _programmaticEdit = false; }
+  previewJscadCode(code);
+}
+
 // Called by image-trace.js after parsing SVG paths directly (no JSCAD round-trip).
 function setDirectPreview(outlines, bbox) {
   const canvas   = document.getElementById('jscadPreviewCanvas');
@@ -266,7 +278,7 @@ async function initJscadEditor() {
         basicSetup,
         javascript(),
         EditorView.updateListener.of(update => {
-          if (update.docChanged) _scheduleRun();
+          if (update.docChanged && !_programmaticEdit) _scheduleRun();
         }),
       ],
       parent: wrap,
@@ -322,10 +334,4 @@ async function initJscadEditor() {
 
   // Run the default template once on load
   _runAndPreview();
-}
-
-// Sets the editor to arbitrary code (used by image-trace.js after tracing).
-function setEditorCode(code) {
-  if (_editorSetValue) _editorSetValue(code);
-  _scheduleRun();
 }
