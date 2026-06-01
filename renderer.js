@@ -12,7 +12,7 @@ async function render() {
   const heightMm = getLabelHeight();
 
   await renderLabel(canvas, {
-    widthMm: LABEL_WIDTH_MM,
+    widthMm: LABEL_WIDTH_MM - LABEL_MARGIN_LEFT - LABEL_MARGIN_RIGHT,
     heightMm,
     scale,
     content,
@@ -21,7 +21,7 @@ async function render() {
 }
 
 async function renderLabel(canvas, { widthMm, heightMm, scale, content }) {
-  const totalW = (widthMm + LABEL_MARGIN_LEFT * 2) * scale;
+  const totalW = (widthMm + LABEL_MARGIN_LEFT + LABEL_MARGIN_RIGHT) * scale;
   const totalH = (heightMm + LABEL_MARGIN_TOP * 2) * scale;
 
   canvas.width = totalW;
@@ -313,13 +313,14 @@ async function getPrintCanvas() {
   const heightMm = getLabelHeight();
 
   const canvas = document.createElement('canvas');
-  await renderLabel(canvas, { widthMm: LABEL_WIDTH_MM, heightMm, scale, content });
+  await renderLabel(canvas, { widthMm: LABEL_WIDTH_MM - LABEL_MARGIN_LEFT - LABEL_MARGIN_RIGHT, heightMm, scale, content });
   return canvas;
 }
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const LABEL_WIDTH_MM = 35;          // Fixed label width
-const LABEL_MARGIN_LEFT = 2;        // mm left margin (printable area offset)
+const LABEL_WIDTH_MM = 35;          // Total physical label length (cut-to-cut)
+const LABEL_MARGIN_LEFT = 2;        // mm leading margin (hardware, via ESC i d)
+const LABEL_MARGIN_RIGHT = 3;       // mm trailing margin (printer minimum cut margin)
 const LABEL_MARGIN_TOP = 1;         // mm top margin
 const FONT_PRIMARY = { family: 'Noto Sans', weight: '900' };
 const FONT_SECONDARY = { family: 'Oswald', weight: '300' };

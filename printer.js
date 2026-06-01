@@ -70,7 +70,7 @@ function packBits(data) {
 async function canvasToRasterRows(canvas, tapeHeightMm, dpi) {
   const printableDots = TAPE_PRINTABLE_DOTS[tapeHeightMm] ?? 70;
   const dotOffset = (PRINT_HEAD_DOTS - printableDots) >> 1;
-  const feedDots  = Math.round(LABEL_WIDTH_MM / (25.4 / dpi));
+  const feedDots  = Math.round((LABEL_WIDTH_MM - LABEL_MARGIN_LEFT - LABEL_MARGIN_RIGHT) / (25.4 / dpi));
 
   const tmp = document.createElement('canvas');
   tmp.width  = feedDots;
@@ -87,7 +87,7 @@ async function canvasToRasterRows(canvas, tapeHeightMm, dpi) {
   const topCropMm = (tapeHeightMm - printableHeightMm) / 2;
   ctx.drawImage(canvas,
     LABEL_MARGIN_LEFT * scale, (LABEL_MARGIN_TOP + topCropMm) * scale,
-    LABEL_WIDTH_MM * scale, printableHeightMm * scale,
+    (LABEL_WIDTH_MM - LABEL_MARGIN_LEFT - LABEL_MARGIN_RIGHT) * scale, printableHeightMm * scale,
     0, 0, feedDots, printableDots
   );
 
