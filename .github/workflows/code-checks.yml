@@ -36,11 +36,12 @@ jobs:
               - "*.html"
               - "*.css"
               - "print-agent/**"
+              - "tests/**"
               - ".github/workflows/code-checks.yml"
 
-  # ── Frontend JS syntax check (no build step in this repo) ──────────────────
+  # ── Frontend JS syntax check + unit tests (no build step in this repo) ─────
   js:
-    name: JS syntax check
+    name: JS syntax check & unit tests
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
@@ -59,6 +60,11 @@ jobs:
             node --check "$f" || fail=1
           done
           exit $fail
+
+      # Unit tests for the pure image-trace pipeline, via Node's built-in runner
+      # (node:test / node:assert) — still zero deps, no framework, no build step.
+      - name: node --test (unit tests)
+        run: node --test tests/*.test.js
 
   # ── Print agent lint (Python, PEP 723 inline-metadata script) ──────────────
   # Lint only — no version-bump gate. A hand-edited monotonic version line would

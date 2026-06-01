@@ -72,9 +72,6 @@
         </div>
 
         <div id="itImageArea" hidden>
-          <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
-          <p class="hint-text it-sel-hint">Drag on the image above to select a region — or leave unselected to trace the whole image</p>
-
           <div class="it-sliders">
             <div class="it-slider-row">
               <label class="it-slider-label" for="itThresholdSlider">Threshold</label>
@@ -87,6 +84,9 @@
               <span class="it-slider-val" id="itEpsilonVal">0</span>
             </div>
           </div>
+
+          <canvas id="itDisplayCanvas" class="it-display-canvas"></canvas>
+          <p class="hint-text it-sel-hint">Drag on the image above to select a region — or leave unselected to trace the whole image</p>
 
           <div class="jscad-toolbar">
             <button type="button" id="itClearBtn" class="btn-secondary jscad-btn">Clear image</button>
