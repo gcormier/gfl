@@ -24,7 +24,8 @@ one SVG file.
    (or **Icon → Custom → Create or contribute a custom image →** in the app).
 2. **Generate from Image** (optional) — drop or paste an engineering drawing /
    logo / silhouette and drag to select a region. Tune **Threshold** and
-   **Simplify**, then **Insert into Editor**.
+   **Simplify**; the JSCad editor below fills in live as you adjust, so what you
+   see in the preview is always what's in the code.
 3. **Design (JSCad)** — refine the outline, or write 2D geometry from scratch.
    `main()` must return a single 2D shape. Click **▶ Run** to preview.
 4. Click **Submit Custom Image…**, enter a **Name**, **Keywords** (comma

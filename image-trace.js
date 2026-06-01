@@ -140,7 +140,6 @@ let _itOrigCanvas = null;
 let _itSelection  = null;
 let _itDragging   = false;
 let _itDragStart  = null;
-let _itLastCode   = null;
 let _itTraceTimer = null;
 let _galleryMeta  = null;  // {id, name, keywords} — set when an SVG with metadata is imported
 
@@ -346,18 +345,13 @@ function _scheduleTrace() {
     console.log('[image-trace] tracing with threshold=', threshold, 'epsilon=', epsilon, 'origCanvas=', _itOrigCanvas?.width, 'x', _itOrigCanvas?.height);
     const code = _traceRegion(threshold, epsilon);
     console.log('[image-trace] trace result:', code ? 'got code (' + code.length + ' chars)' : 'null');
-    const btn  = document.getElementById('itInsertBtn');
 
     if (code) {
-      _itLastCode  = code;
-      btn.disabled = false;
       const nPaths = (code.match(/polygon\(/g) || []).length;
       const nPts   = (code.match(/\[-?\d/g) || []).length;
-      _setTraceStatus(`✓ ${nPts} vertices · ${nPaths} path${nPaths !== 1 ? 's' : ''}`, 'ok');
-      previewJscadCode(code); // live-update JSCAD preview canvas
+      _setTraceStatus(`✓ ${nPts} vertices · ${nPaths} path${nPaths !== 1 ? 's' : ''} · synced to editor below`, 'ok');
+      setEditorCodeFromTrace(code); // single source of truth: editor text + preview stay in lockstep
     } else {
-      _itLastCode  = null;
-      btn.disabled = true;
       _setTraceStatus('No paths found — try adjusting threshold', 'error');
     }
   }, 250);
@@ -555,19 +549,12 @@ function initImageTracer() {
     document.getElementById(id).addEventListener('input', _scheduleTrace);
   });
 
-  // Insert into editor
-  document.getElementById('itInsertBtn').addEventListener('click', () => {
-    if (!_itLastCode) return;
-    setEditorCode(_itLastCode);
-    document.getElementById('jscadSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  // Clear raster image
+  // Clear raster image — the traced code stays in the editor (it's the source of
+  // truth now), so clearing only removes the loaded raster, not your work.
   document.getElementById('itClearBtn').addEventListener('click', () => {
-    _itOrigCanvas = _itSelection = _itLastCode = _galleryMeta = null;
+    _itOrigCanvas = _itSelection = _galleryMeta = null;
     document.getElementById('itDropZone').hidden  = false;
     document.getElementById('itImageArea').hidden = true;
-    document.getElementById('itInsertBtn').disabled = true;
     _setTraceStatus('', '');
   });
 
