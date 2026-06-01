@@ -174,12 +174,25 @@ function _outlinesToSvg(outlines, bbox) {
 
 function _exportSvg() {
   if (!_lastResult) return;
-  const svg  = _outlinesToSvg(_lastResult.outlines, _lastResult.bbox);
-  const blob = new Blob([svg], { type: 'image/svg+xml' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = 'icon.svg';
+  let svg = _outlinesToSvg(_lastResult.outlines, _lastResult.bbox);
+
+  // Embed metadata from the inline form fields if provided
+  const name     = (document.getElementById('iconMetaName')?.value || '').trim();
+  const keywords = (document.getElementById('iconMetaKeywords')?.value || '').trim();
+  if (name || keywords) {
+    const esc  = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const meta = (name     ? `\n  <title>${esc(name)}</title>`   : '') +
+                 (keywords ? `\n  <desc>${esc(keywords)}</desc>` : '');
+    svg = svg.replace(/(<svg\b[^>]*>)/, `$1${meta}`);
+  }
+
+  const idRaw = (document.getElementById('iconMetaId')?.value || '').trim();
+  const id    = idRaw.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/^-+|-+$/g, '');
+  const blob  = new Blob([svg], { type: 'image/svg+xml' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href      = url;
+  a.download  = (id || 'icon') + '.svg';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -250,9 +263,9 @@ async function initJscadEditor() {
 
   if (!wrap) return; // section not present in DOM
 
-  // Size the preview canvas
-  canvas.width  = 200;
-  canvas.height = 200;
+  // Size the preview canvas (larger buffer → sharper when CSS stretches it)
+  canvas.width  = 400;
+  canvas.height = 400;
 
   // Always create a working textarea first — guaranteed editable.
   const ta = document.createElement('textarea');

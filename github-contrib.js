@@ -47,29 +47,25 @@ let _pendingSvg = '';
 function openContribModal(svgMarkup) {
   const overlay = document.getElementById('contribOverlay');
   if (!overlay) return;
-
   _pendingSvg = svgMarkup || '';
-
   const errEl = document.getElementById('contribErrorMsg');
   if (errEl) errEl.textContent = '';
-
   overlay.hidden = false;
-  const nameInput = document.getElementById('contribNameInput');
-  if (nameInput) setTimeout(() => nameInput.focus(), 0);
 }
 
 function submitContribModal() {
   const errEl = document.getElementById('contribErrorMsg');
   const setErr = msg => { if (errEl) errEl.textContent = msg; };
 
-  const name     = (document.getElementById('contribNameInput')?.value || '').trim();
-  const keywords = (document.getElementById('contribKeywordsInput')?.value || '').trim();
-  const idRaw    = (document.getElementById('contribStdIdInput')?.value || '').trim();
+  // Read metadata from the inline form fields (section 02)
+  const name     = (document.getElementById('iconMetaName')?.value || '').trim();
+  const keywords = (document.getElementById('iconMetaKeywords')?.value || '').trim();
+  const idRaw    = (document.getElementById('iconMetaId')?.value || '').trim();
   const id       = _sanitizeId(idRaw || name);
 
-  if (!name)     { setErr('Please enter a name.'); return; }
-  if (!keywords) { setErr('Please enter at least one keyword.'); return; }
-  if (!id)       { setErr('Please enter a filename id (letters, digits, dashes).'); return; }
+  if (!name)     { setErr('Please fill in a Name in the Metadata section.'); return; }
+  if (!keywords) { setErr('Please fill in Keywords in the Metadata section.'); return; }
+  if (!id)       { setErr('Please fill in a Filename ID in the Metadata section.'); return; }
   if (!_pendingSvg) { setErr('No shape to submit — run your design first.'); return; }
 
   const content = _svgWithMetadata(_pendingSvg, name, keywords);
@@ -77,7 +73,7 @@ function submitContribModal() {
 
   // URL length cap: GitHub silently rejects very long URLs (~8KB practical limit).
   if (url.length > 7800) {
-    setErr('This shape is too detailed for the URL-based flow. Try the Simplify slider, or open a PR manually.');
+    setErr('Shape is too complex for the URL-based flow. Try the Simplify slider, or use Export SVG ↓ (metadata is already embedded) and open a PR manually.');
     return;
   }
 
