@@ -115,6 +115,12 @@ jobs:
       actions: write          # allows dispatching pages.yml after committing SVGs
     env:
       FREECAD_APPIMAGE_URL: "https://github.com/FreeCAD/FreeCAD/releases/download/1.1.1/FreeCAD_1.1.1-Linux-x86_64-py311.AppImage"
+      # Pin the Fasteners workbench to a specific commit so CI only sees new
+      # standards when this SHA is deliberately bumped — not on every weekly
+      # cache miss.  After bumping: run `hardware-gen dump-caps` and
+      # `hardware-gen dump-types` locally (or let CI fail once) to regenerate
+      # the two snapshot files in pipeline/.
+      FASTENERS_WB_REF: "8a87ca3be81f750fcddc3cae2486a74cadf6707d"
     defaults:
       run:
         working-directory: hardware-gen
@@ -145,23 +151,21 @@ jobs:
           ./freecad.appimage --appimage-extract
           sudo mv squashfs-root /opt/freecad
 
-      - name: Set cache week key
-        id: week
-        run: echo "key=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
-
       - name: Cache Fasteners workbench
         id: cache-fasteners
         uses: actions/cache@v4
         with:
           path: ~/.local/share/FreeCAD/Mod/Fasteners
-          key: fasteners-wb-${{ runner.os }}-${{ steps.week.outputs.key }}
+          key: fasteners-wb-${{ runner.os }}-${{ env.FASTENERS_WB_REF }}
 
       - name: Install Fasteners workbench
         if: steps.cache-fasteners.outputs.cache-hit != 'true'
         run: |
-          mkdir -p "$HOME/.local/share/FreeCAD/Mod"
-          git clone --depth=1 https://github.com/shaise/FreeCAD_FastenersWB.git \
-              "$HOME/.local/share/FreeCAD/Mod/Fasteners"
+          mkdir -p "$HOME/.local/share/FreeCAD/Mod/Fasteners"
+          git init "$HOME/.local/share/FreeCAD/Mod/Fasteners"
+          git -C "$HOME/.local/share/FreeCAD/Mod/Fasteners" fetch --depth=1 \
+              https://github.com/shaise/FreeCAD_FastenersWB.git "$FASTENERS_WB_REF"
+          git -C "$HOME/.local/share/FreeCAD/Mod/Fasteners" checkout FETCH_HEAD
 
       - name: Set FREECADCMD path
         run: echo "FREECADCMD=/opt/freecad/usr/bin/freecadcmd" >> "$GITHUB_ENV"
