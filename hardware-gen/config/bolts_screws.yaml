@@ -35,12 +35,15 @@ standards:
         length: 10
         views: [iso, top, side]
 
-  # Catalog-only for now — no render recipe yet.
   - id: iso10642
     description: "Fasteners - Hexagon socket countersunk head screws with reduced loadability"
     designations:
       - { system: ISO, code: "10642" }
       - { system: DIN, code: "7991" }
+    renders:
+      - size: M4
+        length: 20
+        views: [iso, side]
 
   # id uppercased = ASMEB18.2.1.6 ("UNC Hex head screws"); .1 is square bolts.
   - id: asmeb18.2.1.6
